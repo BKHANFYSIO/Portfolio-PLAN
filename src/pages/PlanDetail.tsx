@@ -81,7 +81,7 @@ export default function PlanDetail(){
   function recomputeLiveOutside(){
     const temp = periodFromEditForm()
     const visible = new Set(getVisibleWeekNumbers(temp))
-    const outside = (plan.artifacts||[]).filter(a=> !visible.has(a.week)).map(a=>a.id)
+    const outside = (plan.artifacts||[] as any[]).filter((a:any)=> !visible.has(a.week)).map((a:any)=>a.id)
     setLiveOutside(outside.length ? outside : null)
   }
 
