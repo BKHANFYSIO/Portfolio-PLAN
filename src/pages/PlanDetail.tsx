@@ -63,7 +63,7 @@ export default function PlanDetail(){
     const plans = readJson(LS_KEYS.plans, [] as any[])
     const idx = plans.findIndex((p:any)=>p.id===plan.id)
     if(idx>=0){
-      plans[idx] = { ...plans[idx], name: editForm.name.trim() || 'Naamloos', period: nextPeriod }
+      plans[idx] = { ...plans[idx], name: editForm.name.trim() || 'Naamloos', period: nextPeriod, updatedAt: Date.now() }
       writeJson(LS_KEYS.plans, plans)
     }
     setLocalName(editForm.name.trim() || 'Naamloos')

@@ -34,7 +34,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
     const idx = plans.findIndex(p=>p.id===plan.id)
     if(idx>=0){
-      plans[idx] = { ...plans[idx], artifacts: [artifact, ...plans[idx].artifacts] }
+      plans[idx] = { ...plans[idx], artifacts: [artifact, ...plans[idx].artifacts], updatedAt: Date.now() }
       writeJson(LS_KEYS.plans, plans)
       onSaved(artifact)
       onClose()

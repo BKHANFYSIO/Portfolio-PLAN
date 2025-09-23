@@ -118,7 +118,7 @@ function App() {
               <li key={p.id} className="row">
                 <div className="meta">
                   <div className="title">{p.name}</div>
-                  <div className="sub">{p.year} · {p.courseName} · {p.period.label}</div>
+                  <div className="sub">{p.year} · {p.courseName} · {p.period.label} · aangemaakt {new Date(p.createdAt).toLocaleDateString()} · bewerkt {new Date(p.updatedAt).toLocaleDateString()}</div>
                 </div>
                 <div className="row-actions">
                   <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
@@ -133,7 +133,7 @@ function App() {
               <li key={p.id} className="row">
                 <div className="meta">
                   <div className="title">{p.name}</div>
-                  <div className="sub">{p.year} · {p.courseName} · {p.period.label}</div>
+                  <div className="sub">{p.year} · {p.courseName} · {p.period.label} · aangemaakt {new Date(p.createdAt).toLocaleDateString()} · bewerkt {new Date(p.updatedAt).toLocaleDateString()}</div>
                 </div>
                 <div className="row-actions">
                   <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
