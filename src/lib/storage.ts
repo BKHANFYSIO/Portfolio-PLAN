@@ -23,6 +23,7 @@ export type Artifact = {
   vraak: VraakScore;
   createdAt: number;
   updatedAt: number;
+  kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
 }
 
 export type PortfolioPlan = {

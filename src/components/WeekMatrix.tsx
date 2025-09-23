@@ -13,25 +13,35 @@ export default function WeekMatrix({ plan }: Props){
   const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl, course])
   const weeks = useMemo(()=>{
     const year = years.find(y=>y.year===plan.year)
-    const all = (year?.weeks || []).map(w=>w.week)
+    const all = (year?.weeks || [])
     if(plan.period?.type==='periode'){
       const p = Number(plan.period.value)
-      if(p>=1 && p<=4){
-        const chunk = Math.ceil(all.length/4)
-        const start = (p-1)*chunk
-        return all.slice(start, start+chunk)
-      }
+      const filtered = all.filter(w=> w.kind!=='zero')
+      const startIdx = filtered.findIndex(w => String(w.code||'') === `${p}.1`)
+      if(startIdx === -1) return filtered.map(w=>w.week)
+      const nextIdx = filtered.findIndex(w => String(w.code||'') === `${p+1}.1`)
+      const endIdx = nextIdx === -1 ? filtered.length : nextIdx
+      return filtered.slice(startIdx, endIdx).map(w=>w.week)
     }
     if(plan.period?.type==='semester'){
       const s = Number(plan.period.value)
-      if(s===1){ return all.slice(0, Math.ceil(all.length/2)) }
-      if(s===2){ return all.slice(Math.ceil(all.length/2)) }
+      const filtered = all.filter(w=> w.kind!=='zero')
+      const idxFor = (label:string)=> filtered.findIndex(w=> String(w.code||'')===label)
+      const p1 = idxFor('1.1'); const p3 = idxFor('3.1')
+      if(p1>=0 && p3>p1){
+        if(s===1) return filtered.slice(p1, p3).map(w=>w.week)
+        return filtered.slice(p3).map(w=>w.week)
+      }
+      // fallback: halve verdeling
+      const half = Math.ceil(filtered.length/2)
+      if(s===1) return filtered.slice(0,half).map(w=>w.week)
+      return filtered.slice(half).map(w=>w.week)
     }
     if(plan.period?.type==='maatwerk' && Array.isArray(plan.period.value)){
       const [start,end] = plan.period.value
-      return all.filter(w=> w>=start && w<=end)
+      return all.filter(w=> w.week>=start && w.week<=end).map(w=>w.week)
     }
-    return all
+    return all.map(w=>w.week)
   }, [plan.year, years, plan.period])
 
   // const rows = useMemo(()=> evlForCourse.flatMap(b => b.outcomes.map(o => ({ evlId: b.id, lukId: o.id, name: o.name }))), [evlForCourse])
@@ -146,8 +156,10 @@ export default function WeekMatrix({ plan }: Props){
             {weeks.map(w=> {
               const y = years.find(y=>y.year===plan.year)
               const info = y?.weeks.find(ww=> ww.week===w)
-              const label = info?.isHoliday ? `W${w}*` : `W${w}`
-              const title = info ? `${info.label} · ${info.startISO} — ${info.endISO}${info.isHoliday ? ' · Vakantie' : ''}` : `W${w}`
+              const base = info?.code ? info.code : `W${w}`
+              const label = info?.isHoliday ? `${base}*` : base
+              const ext = info?.kind==='zero' ? ' · 0-week' : (info?.isHoliday ? ' · Vakantie' : '')
+              const title = info ? `${info.label} · ${info.startISO}${info.endISO && info.endISO!==info.startISO ? ' — '+info.endISO : ''}${ext}` : base
               return <div key={w} className={`wm-col ${info?.isHoliday ? 'holiday':''}`} title={title}>{label}</div>
             })}
           </div>

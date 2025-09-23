@@ -18,6 +18,17 @@ export type WeekInfo = {
   endISO: string;   // ISO date (yyyy-mm-dd) for Sunday
   isHoliday: boolean;
   holidayLabel?: string;
+  code?: string; // e.g., "1.1", "vak", "0"
+  kind?: 'regular'|'vacation'|'zero';
+}
+
+export type TemplateArtifact = {
+  name: string;
+  evl: string[]; // codes
+  cases: string[]; // names/ids
+  knowledge: string[]; // names/ids
+  vraak: { variatie:number; relevantie:number; authenticiteit:number; actualiteit:number; kwantiteit:number };
+  kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
 }
 
 const EVLS: EVL[] = [
@@ -165,37 +176,53 @@ export async function importYearsFromPublic(): Promise<Array<{id:string;year:num
       const lesIdx = header.findIndex(h=>/lesweek/i.test(h))
       const datIdx = header.findIndex(h=>/datum/i.test(h))
       const yIdx   = header.findIndex(h=>/jaar|year/i.test(h))
-      let curYear: number|undefined
+      let currentRowYear: number|undefined
+      let schoolYearStart: number|undefined
       const counters = new Map<number, number>()
       for(let i=1;i<rows.length;i++){
         const r = rows[i]
         if(!r || (r.every((c:any)=> c==null || c===''))) continue
         const lesweekCell = String(r[lesIdx] ?? '').trim()
         const yearCell = r[yIdx]
-        if(yearCell) curYear = Number(yearCell)
-        if(!curYear) continue
+        if(yearCell) currentRowYear = Number(yearCell)
+        if(!schoolYearStart && currentRowYear) schoolYearStart = currentRowYear
+        if(!schoolYearStart) continue
         if(/semester/i.test(lesweekCell)) { continue } // headerregel overslaan
-        const isNumericWeek = /^\d+(\.\d+)?/.test(lesweekCell)
-        const isHoliday = /vakantie/i.test(lesweekCell) || /jaara?fsluiting/i.test(lesweekCell)
+        const codeMatch = lesweekCell.match(/^(\d+\.\d+)/)
+        const code = codeMatch ? codeMatch[1] : ( /vakantie/i.test(lesweekCell) ? 'vak' : (/jaarafsluiting|nulweek/i.test(lesweekCell)? '0' : (/^0\./.test(lesweekCell) ? '0' : undefined)))
+        const isHoliday = code==='vak'
+        const kind: 'regular'|'vacation'|'zero' = isHoliday ? 'vacation' : (/^0(\.|$)/.test(String(code||'')) ? 'zero' : 'regular')
         // datum kan zijn "18-aug" of "2-feb" → splits op '-'
-        const datText = String(r[datIdx] ?? '')
+        const cellVal = r[datIdx]
         let startISO = ''
-        if(datText){
-          const m = datText.match(/(\d{1,2})[-\s]?([A-Za-z]{3})/)
-          if(m){ startISO = toISO(m[1], m[2], curYear) }
+        if(cellVal!=null){
+          if(typeof cellVal === 'number'){
+            const d = XLSX.SSF?.parse_date_code ? XLSX.SSF.parse_date_code(cellVal) : null
+            if(d){
+              const mm = String(d.m).padStart(2,'0'); const dd = String(d.d).padStart(2,'0')
+              const yyyy = (currentRowYear ?? d.y)
+              startISO = `${yyyy}-${mm}-${dd}`
+            }
+          }else{
+            const datText = String(cellVal)
+            const m = datText.match(/(\d{1,2})[-\s]?([A-Za-z]{3})/)
+            if(m){ startISO = toISO(m[1], m[2], (currentRowYear)) }
+          }
         }
-        const arr = yearToWeeks.get(curYear) || []
-        const nextNum = (counters.get(curYear) || 0) + 1
-        counters.set(curYear, nextNum)
+        const arr = yearToWeeks.get(schoolYearStart) || []
+        const nextNum = (counters.get(schoolYearStart) || 0) + 1
+        counters.set(schoolYearStart, nextNum)
         arr.push({
           week: nextNum,
-          label: isNumericWeek ? `Lesweek ${lesweekCell}` : lesweekCell || `Week ${nextNum}`,
+          label: code ? code : (lesweekCell || `Week ${nextNum}`),
           startISO,
           endISO: startISO,
           isHoliday,
-          holidayLabel: isHoliday ? lesweekCell : undefined
+          holidayLabel: isHoliday ? lesweekCell : undefined,
+          code: code,
+          kind
         })
-        yearToWeeks.set(curYear, arr)
+        yearToWeeks.set(schoolYearStart, arr)
       }
     }
     const out = Array.from(yearToWeeks.entries()).map(([year,weeks])=> ({ id:`year_${year}`, year, weeks }))
@@ -203,6 +230,39 @@ export async function importYearsFromPublic(): Promise<Array<{id:string;year:num
     return out
   }catch{
     return getYears()
+  }
+}
+
+// Templates import (sjablonen)
+export async function importTemplatesFromPublic(): Promise<TemplateArtifact[]>{
+  try{
+    const idxResp = await fetch('/sjablonen-index.json')
+    if(!idxResp.ok) return readJson('pf-templates', [] as TemplateArtifact[])
+    const idx = await idxResp.json() as string[]
+    const out: TemplateArtifact[] = []
+    for(const file of idx){
+      const res = await fetch(`/${encodeURIComponent(file)}`)
+      const buf = await res.arrayBuffer()
+      const wb = XLSX.read(buf)
+      const sheet = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json<any>(sheet)
+      for(const r of rows){
+        const name = String(r['Naam']||r['name']||'').trim()
+        if(!name) continue
+        const evl = String(r['EVL']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
+        const cases = String(r['Casussen']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
+        const knowledge = String(r['Kennis']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
+        const vraak = {
+          variatie: Number(r['Variatie']||3), relevantie: Number(r['Relevantie']||3), authenticiteit: Number(r['Authenticiteit']||3), actualiteit: Number(r['Actualiteit']||3), kwantiteit: Number(r['Kwantiteit']||3)
+        }
+        const kind = String(r['Soort']||'overig').toLowerCase() as any
+        out.push({ name, evl, cases, knowledge, vraak, kind })
+      }
+    }
+    writeJson('pf-templates', out)
+    return out
+  }catch{
+    return readJson('pf-templates', [] as TemplateArtifact[])
   }
 }
 

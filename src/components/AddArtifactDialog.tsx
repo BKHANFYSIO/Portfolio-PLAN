@@ -1,14 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { generateId, LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { Artifact, PortfolioPlan } from '../lib/storage'
-import { getCurriculum } from '../lib/curriculum'
+import { getCurriculum, getYears } from '../lib/curriculum'
 
 type Props = { plan: PortfolioPlan; onClose: ()=>void; onSaved: (a:Artifact)=>void }
 
 export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const { evl, courses } = getCurriculum()
   const course = courses.find(c=>c.id===plan.courseId)!
+  const yearWeeks = getYears().find(y=>y.year===plan.year)?.weeks || []
+  const templates = readJson<any[]>('pf-templates', [])
 
+  const initialMode = (localStorage.getItem('pf-add-mode') as 'wizard'|'full') || 'wizard'
+  const [mode, setMode] = useState<'wizard'|'full'>(initialMode)
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
   const [week, setWeek] = useState<number|''>('')
@@ -19,6 +23,43 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
 
   const evlExcluded = course?.evlOverrides?.EVL1 || []
   const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl])
+
+  function visibleWeekNumbers(){
+    const all = yearWeeks
+    if(plan.period?.type==='periode'){
+      const p = Number(plan.period.value)
+      const filtered = all.filter(w=> w.kind!=='zero')
+      const startIdx = filtered.findIndex(w=> String(w.code||'')===`${p}.1`)
+      if(startIdx===-1) return filtered.map(w=>w.week)
+      const nextIdx = filtered.findIndex(w=> String(w.code||'')===`${p+1}.1`)
+      const endIdx = nextIdx===-1 ? filtered.length : nextIdx
+      return filtered.slice(startIdx, endIdx).map(w=>w.week)
+    }
+    if(plan.period?.type==='semester'){
+      const s = Number(plan.period.value)
+      const filtered = all.filter(w=> w.kind!=='zero')
+      const idx = (label:string)=> filtered.findIndex(w=> String(w.code||'')===label)
+      const p1 = idx('1.1'); const p3 = idx('3.1')
+      if(p1>=0 && p3>p1){
+        if(s===1) return filtered.slice(p1, p3).map(w=>w.week)
+        return filtered.slice(p3).map(w=>w.week)
+      }
+      const half = Math.ceil(filtered.length/2)
+      if(s===1) return filtered.slice(0,half).map(w=>w.week)
+      return filtered.slice(half).map(w=>w.week)
+    }
+    if(plan.period?.type==='maatwerk' && Array.isArray(plan.period.value)){
+      const [start,end] = plan.period.value
+      return all.filter(w=> w.week>=start && w.week<=end).map(w=>w.week)
+    }
+    return all.map(w=>w.week)
+  }
+
+  const visibleWeeks = useMemo(()=> visibleWeekNumbers(), [plan.period, yearWeeks])
+
+  useEffect(()=>{
+    if(visibleWeeks.length && week==='') setWeek(visibleWeeks[0])
+  }, [visibleWeeks])
 
   function toggle<T extends string>(arr: T[], v: T, set:(x:T[])=>void){
     set(arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v])
@@ -45,16 +86,43 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
     <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog" onClick={e=>e.stopPropagation()}>
         <h3>Bewijsstuk toevoegen</h3>
-        <div className="muted" style={{marginBottom:8}}>Stap {step} van 5</div>
+        <div style={{display:'flex', gap:8, marginBottom:8}}>
+          <button className="file-label" onClick={()=>{ setMode('wizard'); localStorage.setItem('pf-add-mode','wizard') }} disabled={mode==='wizard'}>Stappen</button>
+          <button className="file-label" onClick={()=>{ setMode('full'); localStorage.setItem('pf-add-mode','full') }} disabled={mode==='full'}>Formulier</button>
+        </div>
+        {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step} van 5</div>}
 
-        {step===1 && (
+        {mode==='wizard' && step===1 && (
           <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
             <label><span>Naam</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="bijv. e-learning certificaat"/></label>
-            <label><span>Week</span><input type="number" min={1} max={53} value={week} onChange={e=>setWeek(e.target.value as any)} /></label>
+            <label><span>Week</span>
+              <select value={week} onChange={e=>setWeek(Number(e.target.value) as any)}>
+                {yearWeeks.filter(w=> visibleWeeks.includes(w.week)).map(w => {
+                  const label = `${w.code||w.label}${w.startISO ? ' — '+w.startISO : ''}`
+                  return <option key={w.week} value={w.week}>{label}</option>
+                })}
+              </select>
+            </label>
+            {templates.length>0 && (
+              <label><span>Sjabloon</span>
+                <select onChange={e=>{
+                  const t = templates.find(x=> x.name===e.target.value)
+                  if(!t) return
+                  setName(t.name)
+                  setEvlOutcomeIds([...(t.evl||[])])
+                  setCaseIds([...(t.cases||[])])
+                  setKnowledgeIds([...(t.knowledge||[])])
+                  setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+                }}>
+                  <option value="">Kies sjabloon…</option>
+                  {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
+                </select>
+              </label>
+            )}
           </div>
         )}
 
-        {step===2 && (
+        {mode==='wizard' && step===2 && (
           <div>
             <h4>EVL leeruitkomsten</h4>
             {evlForCourse.map(b=> (
@@ -62,7 +130,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 <div className="evl-title">{b.id} · {b.name}</div>
                 <div className="luk">
                   {b.outcomes.map(o=> (
-                    <label key={o.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
+                    <label key={o.id} title={o.name} style={{display:'inline-flex',gap:6,marginRight:12}}>
                       <input type="checkbox" checked={evlOutcomeIds.includes(o.id)} onChange={()=>toggle(evlOutcomeIds,o.id,setEvlOutcomeIds)} /> {o.id}
                     </label>
                   ))}
@@ -72,7 +140,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           </div>
         )}
 
-        {step===3 && (
+        {mode==='wizard' && step===3 && (
           <div>
             <h4>Casussen</h4>
             <div className="luk">
@@ -93,8 +161,8 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           </div>
         )}
 
-        {step===4 && (
-          <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
+        {mode==='wizard' && step===4 && (
+          <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))'}}>
             {(['variatie','relevantie','authenticiteit','actualiteit','kwantiteit'] as const).map(k => (
               <label key={k}><span>{k}</span>
                 <input type="range" min={1} max={5} value={vraak[k]} onChange={e=>setVraak({ ...vraak, [k]: Number(e.target.value) })} />
@@ -103,7 +171,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           </div>
         )}
 
-        {step===5 && (
+        {mode==='wizard' && step===5 && (
           <div>
             <h4>Controle</h4>
             <div className="muted">Naam: {name || '—'} · Week: {week || '—'}</div>
@@ -112,10 +180,91 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           </div>
         )}
 
-        <div className="dialog-actions">
-          {step>1 ? <button onClick={()=>setStep(step-1)}>Terug</button> : <button onClick={onClose}>Annuleren</button>}
-          {step<5 ? <button onClick={()=>setStep(step+1)}>Volgende</button> : <button onClick={save}>Opslaan</button>}
-        </div>
+        {mode==='wizard' ? (
+          <div className="dialog-actions">
+            {step>1 ? <button onClick={()=>setStep(step-1)}>Terug</button> : <button onClick={onClose}>Annuleren</button>}
+            {step<5 ? <button onClick={()=>setStep(step+1)}>Volgende</button> : <button onClick={save}>Opslaan</button>}
+          </div>
+        ) : (
+          <>
+            <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
+              <label><span>Naam</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="bijv. e-learning certificaat"/></label>
+              <label><span>Week</span>
+                <select value={week} onChange={e=>setWeek(Number(e.target.value) as any)}>
+                  {yearWeeks.filter(w=> visibleWeeks.includes(w.week)).map(w => {
+                    const label = `${w.code||w.label}${w.startISO ? ' — '+w.startISO : ''}`
+                    return <option key={w.week} value={w.week}>{label}</option>
+                  })}
+                </select>
+              </label>
+              {templates.length>0 && (
+                <label><span>Sjabloon</span>
+                  <select onChange={e=>{
+                    const t = templates.find(x=> x.name===e.target.value)
+                    if(!t) return
+                    setName(t.name)
+                    setEvlOutcomeIds([...(t.evl||[])])
+                    setCaseIds([...(t.cases||[])])
+                    setKnowledgeIds([...(t.knowledge||[])])
+                    setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+                  }}>
+                    <option value="">Kies sjabloon…</option>
+                    {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+            <fieldset>
+              <legend>EVL leeruitkomsten</legend>
+              {evlForCourse.map(b=> (
+                <div key={b.id} style={{marginBottom:8}}>
+                  <div className="muted" style={{fontSize:12}}>{b.id} · {b.name}</div>
+                  <div>
+                    {b.outcomes.map(o=> (
+                      <label key={o.id} title={o.name} style={{display:'inline-flex',gap:6,marginRight:12}}>
+                        <input type="checkbox" checked={evlOutcomeIds.includes(o.id)} onChange={()=>toggle(evlOutcomeIds,o.id,setEvlOutcomeIds)} /> {o.id}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Casussen</legend>
+              <div>
+                {course.cases.map(c=> (
+                  <label key={c.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
+                    <input type="checkbox" checked={caseIds.includes(c.id)} onChange={()=>toggle(caseIds,c.id,setCaseIds)} /> {c.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Kennisdomeinen</legend>
+              <div>
+                {course.knowledgeDomains.map(k=> (
+                  <label key={k.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
+                    <input type="checkbox" checked={knowledgeIds.includes(k.id)} onChange={()=>toggle(knowledgeIds,k.id,setKnowledgeIds)} /> {k.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>VRAAK</legend>
+              <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))'}}>
+                {(['variatie','relevantie','authenticiteit','actualiteit','kwantiteit'] as const).map(k => (
+                  <label key={k}><span>{k}</span>
+                    <input type="range" min={1} max={5} value={vraak[k]} onChange={e=>setVraak({ ...vraak, [k]: Number(e.target.value) })} />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="dialog-actions">
+              <button className="file-label" onClick={onClose}>Annuleren</button>
+              <button className="btn" onClick={save}>Opslaan</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
