@@ -1,7 +1,8 @@
 export const LS_KEYS = {
   plans: 'pf-portfolio-plans',
   curriculum: 'pf-curriculum',
-  years: 'pf-year-planners'
+  years: 'pf-year-planners',
+  ui: 'pf-ui-preferences'
 } as const;
 
 export type VraakScore = {
@@ -32,6 +33,9 @@ export type PortfolioPlan = {
   courseName: string;
   period: { type: 'periode'|'semester'|'maatwerk'; value: number|[number,number]; label: string };
   artifacts: Artifact[];
+  createdAt: number;
+  updatedAt: number;
+  favorite?: boolean;
 }
 
 export function readJson<T>(key: string, fallback: T): T {

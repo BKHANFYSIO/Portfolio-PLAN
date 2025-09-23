@@ -18,10 +18,26 @@ function App() {
   const [showRestore, setShowRestore] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
-  useEffect(()=>{ ensureSeed(); setPlans(readJson(LS_KEYS.plans, [] as PortfolioPlan[])) }, [])
+  type UiPrefs = { sortBy: 'alpha'|'created'|'updated'; sortDir: 'asc'|'desc' }
+  const [uiPrefs, setUiPrefs] = useState<UiPrefs>(()=> readJson<UiPrefs>(LS_KEYS.ui, { sortBy: 'updated', sortDir: 'desc' }))
+
+  useEffect(()=>{
+    ensureSeed();
+    const fromLs = readJson(LS_KEYS.plans, [] as PortfolioPlan[])
+    // migreer oudere entries zonder timestamps
+    const migrated = fromLs.map(p => ({
+      createdAt: Date.now(), updatedAt: Date.now(), favorite: false, ...p,
+      createdAt: (p as any).createdAt ?? Date.now(),
+      updatedAt: (p as any).updatedAt ?? Date.now(),
+      favorite: (p as any).favorite ?? false,
+    })) as PortfolioPlan[]
+    setPlans(migrated)
+    if(migrated !== fromLs) writeJson(LS_KEYS.plans, migrated)
+  }, [])
   useEffect(()=>{ applyTheme() }, [])
 
   function save(pls: PortfolioPlan[]){ setPlans(pls); writeJson(LS_KEYS.plans, pls); }
+  function savePrefs(next: UiPrefs){ setUiPrefs(next); writeJson(LS_KEYS.ui, next) }
   function remove(id: string){ save(plans.filter(p=>p.id!==id)) }
 
   function create(){
@@ -31,7 +47,8 @@ function App() {
     if(form.periodType==='periode') period = { type:'periode', value:Number(form.periodPeriode), label:`Periode ${form.periodPeriode}` };
     else if(form.periodType==='semester') period = { type:'semester', value:Number(form.periodSemester), label:`Semester ${form.periodSemester}` };
     else period = { type:'maatwerk', value:[Number(form.periodStartWeek), Number(form.periodEndWeek)], label:`Maatwerk weeks ${form.periodStartWeek}-${form.periodEndWeek}` };
-    const plan: PortfolioPlan = { id: generateId('plan'), name: form.name.trim(), year: Number(form.year), courseId: course.id, courseName: course.name, period, artifacts: [] };
+    const now = Date.now()
+    const plan: PortfolioPlan = { id: generateId('plan'), name: form.name.trim(), year: Number(form.year), courseId: course.id, courseName: course.name, period, artifacts: [], createdAt: now, updatedAt: now, favorite: false };
     save([plan, ...plans]);
     setShowDialog(false);
     setForm({ ...form, name: '' });
@@ -46,6 +63,26 @@ function App() {
     applyTheme()
   }
 
+  function toggleFavorite(id: string){
+    const next = plans.map(p => p.id===id ? ({ ...p, favorite: !p.favorite }) : p)
+    save(next)
+  }
+
+  function sorted(list: PortfolioPlan[]): PortfolioPlan[]{
+    const { sortBy, sortDir } = uiPrefs
+    const dir = sortDir==='asc' ? 1 : -1
+    const clone = [...list]
+    clone.sort((a,b)=>{
+      if(sortBy==='alpha') return a.name.localeCompare(b.name) * dir
+      if(sortBy==='created') return (((a.createdAt)||0) - ((b.createdAt)||0)) * dir
+      return (((a.updatedAt)||0) - ((b.updatedAt)||0)) * dir
+    })
+    return clone
+  }
+
+  const favs = sorted(plans.filter(p=>p.favorite))
+  const others = sorted(plans.filter(p=>!p.favorite))
+
   return (
     <div className="app">
       <header className="header">
@@ -57,12 +94,27 @@ function App() {
       </header>
 
       <section className="list">
-        <h2>Mijn portfolio plannen</h2>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <h2 style={{margin:0}}>Mijn portfolio plannen</h2>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <label className="muted" style={{fontSize:12}}>Sorteer op</label>
+            <select value={uiPrefs.sortBy} onChange={e=> savePrefs({ ...uiPrefs, sortBy: e.target.value as UiPrefs['sortBy'] })} className="file-label">
+              <option value="updated">Laatst bewerkt</option>
+              <option value="created">Aangemaakt</option>
+              <option value="alpha">Titel (A-Z)</option>
+            </select>
+            <select value={uiPrefs.sortDir} onChange={e=> savePrefs({ ...uiPrefs, sortDir: e.target.value as UiPrefs['sortDir'] })} className="file-label">
+              <option value="desc">↧ aflopend</option>
+              <option value="asc">↥ oplopend</option>
+            </select>
+          </div>
+        </div>
         {plans.length===0 ? (
           <p className="muted">Nog geen plannen. Klik op “Nieuw portfolio plan”.</p>
         ) : (
           <ul>
-            {plans.map(p=> (
+            {favs.length>0 && <li className="row" style={{borderTop:'none'}}><div className="title">Favorieten</div></li>}
+            {favs.map(p=> (
               <li key={p.id} className="row">
                 <div className="meta">
                   <div className="title">{p.name}</div>
@@ -70,6 +122,22 @@ function App() {
                 </div>
                 <div className="row-actions">
                   <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
+                  <button onClick={()=>toggleFavorite(p.id)}>{p.favorite ? '★' : '☆'}</button>
+                  <button onClick={()=>alert('PDF volgt')}>PDF</button>
+                  <button className="danger" onClick={()=>remove(p.id)}>Verwijderen</button>
+                </div>
+              </li>
+            ))}
+            {others.length>0 && favs.length>0 && <li className="row" style={{borderTop:'none'}}><div className="title">Overige</div></li>}
+            {others.map(p=> (
+              <li key={p.id} className="row">
+                <div className="meta">
+                  <div className="title">{p.name}</div>
+                  <div className="sub">{p.year} · {p.courseName} · {p.period.label}</div>
+                </div>
+                <div className="row-actions">
+                  <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
+                  <button onClick={()=>toggleFavorite(p.id)}>{p.favorite ? '★' : '☆'}</button>
                   <button onClick={()=>alert('PDF volgt')}>PDF</button>
                   <button className="danger" onClick={()=>remove(p.id)}>Verwijderen</button>
                 </div>
