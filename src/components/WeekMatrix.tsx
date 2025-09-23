@@ -125,7 +125,7 @@ export default function WeekMatrix({ plan }: Props){
       onPointerCancel={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
       onPointerLeave={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
     >
-      <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: '96px', ['--leftWidth' as any]: '320px', ['--rightWidth' as any]: '140px' }}>
+      <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: '88px', ['--leftWidth' as any]: '300px', ['--rightWidth' as any]: '132px' }}>
         <div className="wm-header">
           <div className="wm-corner">
             <div className="wm-corner-inner">

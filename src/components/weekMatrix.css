@@ -17,7 +17,7 @@
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
 .wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content }
-.wm-cell{ height:50px; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
+.wm-cell{ height:46px; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
 .wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
 .wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface) }
