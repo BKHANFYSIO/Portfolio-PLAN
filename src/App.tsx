@@ -24,15 +24,18 @@ function App() {
   useEffect(()=>{
     ensureSeed();
     const fromLs = readJson(LS_KEYS.plans, [] as PortfolioPlan[])
-    // migreer oudere entries zonder timestamps
+    // migreer oudere entries zonder timestamps/favorite
+    const now = Date.now()
     const migrated = fromLs.map(p => ({
-      createdAt: Date.now(), updatedAt: Date.now(), favorite: false, ...p,
-      createdAt: (p as any).createdAt ?? Date.now(),
-      updatedAt: (p as any).updatedAt ?? Date.now(),
+      ...p,
+      createdAt: (p as any).createdAt ?? now,
+      updatedAt: (p as any).updatedAt ?? now,
       favorite: (p as any).favorite ?? false,
     })) as PortfolioPlan[]
     setPlans(migrated)
-    if(migrated !== fromLs) writeJson(LS_KEYS.plans, migrated)
+    // schrijf terug indien er veld ontbrak
+    const changed = migrated.some((p,i)=> p !== fromLs[i])
+    if(changed) writeJson(LS_KEYS.plans, migrated)
   }, [])
   useEffect(()=>{ applyTheme() }, [])
 
