@@ -144,38 +144,62 @@ export function getYears(){
 export async function importYearsFromPublic(): Promise<Array<{id:string;year:number;weeks:WeekInfo[]}>>{
   try{
     const idx = await fetch('/year-index.json').then(r=>r.json()) as string[]
-    const out: Array<{id:string;year:number;weeks:WeekInfo[]}> = []
+    const yearToWeeks = new Map<number, WeekInfo[]>()
+    const months: Record<string,string> = { jan:'01', feb:'02', mrt:'03', apr:'04', mei:'05', jun:'06', jul:'07', aug:'08', sep:'09', okt:'10', nov:'11', dec:'12' }
+    const toISO = (day: string|number|undefined|null, monText: string|undefined, year?: number) => {
+      if(!day || !monText || !year) return ''
+      const dd = String(day).padStart(2,'0')
+      const key = monText.toLowerCase().slice(0,3)
+      const mm = months[key]
+      if(!mm) return ''
+      return `${year}-${mm}-${dd}`
+    }
     for(const file of idx){
       const res = await fetch(`/${encodeURIComponent(file)}`)
       const buf = await res.arrayBuffer()
       const wb = XLSX.read(buf)
       const sheet = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json<any>(sheet, { header:1 }) as any[][]
-      // heuristiek: zoek kolommen Year, Week, Start, End, Vakantie?
-      const header = rows[0].map(String)
-      const yIdx = header.findIndex(h=>/jaar|year/i.test(h))
-      const wIdx = header.findIndex(h=>/week/i.test(h))
-      const sIdx = header.findIndex(h=>/start/i.test(h))
-      const eIdx = header.findIndex(h=>/eind|end/i.test(h))
-      const holIdx = header.findIndex(h=>/vakantie|holiday/i.test(h))
-      const year = Number(rows[1]?.[yIdx] ?? new Date().getFullYear())
-      const weeks: WeekInfo[] = []
+      // verwachte kolommen: Lesweek | Datum | Jaar (voorbeeld in NL)
+      const header = rows[0].map((v:any)=> String(v||''))
+      const lesIdx = header.findIndex(h=>/lesweek/i.test(h))
+      const datIdx = header.findIndex(h=>/datum/i.test(h))
+      const yIdx   = header.findIndex(h=>/jaar|year/i.test(h))
+      let curYear: number|undefined
+      const counters = new Map<number, number>()
       for(let i=1;i<rows.length;i++){
         const r = rows[i]
-        const wk = Number(r[wIdx])
-        if(!wk) continue
-        weeks.push({
-          week: wk,
-          label: `Week ${wk}`,
-          startISO: String(r[sIdx] ?? ''),
-          endISO: String(r[eIdx] ?? ''),
-          isHoliday: Boolean(r[holIdx]),
-          holidayLabel: Boolean(r[holIdx]) ? 'Vakantie' : undefined
+        if(!r || (r.every((c:any)=> c==null || c===''))) continue
+        const lesweekCell = String(r[lesIdx] ?? '').trim()
+        const yearCell = r[yIdx]
+        if(yearCell) curYear = Number(yearCell)
+        if(!curYear) continue
+        if(/semester/i.test(lesweekCell)) { continue } // headerregel overslaan
+        const isNumericWeek = /^\d+(\.\d+)?/.test(lesweekCell)
+        const isHoliday = /vakantie/i.test(lesweekCell) || /jaara?fsluiting/i.test(lesweekCell)
+        // datum kan zijn "18-aug" of "2-feb" → splits op '-'
+        const datText = String(r[datIdx] ?? '')
+        let startISO = ''
+        if(datText){
+          const m = datText.match(/(\d{1,2})[-\s]?([A-Za-z]{3})/)
+          if(m){ startISO = toISO(m[1], m[2], curYear) }
+        }
+        const arr = yearToWeeks.get(curYear) || []
+        const nextNum = (counters.get(curYear) || 0) + 1
+        counters.set(curYear, nextNum)
+        arr.push({
+          week: nextNum,
+          label: isNumericWeek ? `Lesweek ${lesweekCell}` : lesweekCell || `Week ${nextNum}`,
+          startISO,
+          endISO: startISO,
+          isHoliday,
+          holidayLabel: isHoliday ? lesweekCell : undefined
         })
+        yearToWeeks.set(curYear, arr)
       }
-      out.push({ id:`year_${year}`, year, weeks })
     }
-    writeJson(LS_KEYS.years, out)
+    const out = Array.from(yearToWeeks.entries()).map(([year,weeks])=> ({ id:`year_${year}`, year, weeks }))
+    if(out.length>0){ writeJson(LS_KEYS.years, out) }
     return out
   }catch{
     return getYears()
