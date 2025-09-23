@@ -62,11 +62,15 @@ export default function WeekMatrix({ plan }: Props){
   const tableRef = useRef<HTMLDivElement>(null)
   const hScrollRef = useRef<HTMLDivElement>(null)
   const [spacerW, setSpacerW] = useState<number>(0)
+  const dragRef = useRef<{down:boolean; dragging:boolean; lastX:number}>({down:false,dragging:false,lastX:0})
+  const [dragging, setDragging] = useState(false)
 
   useEffect(()=>{
     const resize = () => {
       const w = tableRef.current?.scrollWidth || 0
-      setSpacerW(w)
+      const visible = wrapRef.current?.clientWidth || 0
+      // Spacer minimaal zichtbare breedte zodat balk altijd zichtbaar is
+      setSpacerW(Math.max(w, visible))
       if(hScrollRef.current && wrapRef.current){
         hScrollRef.current.scrollLeft = wrapRef.current.scrollLeft
       }
@@ -87,20 +91,47 @@ export default function WeekMatrix({ plan }: Props){
     const onH = () => {
       if(syncing) return; syncing = true; w.scrollLeft = h.scrollLeft; syncing = false
     }
-    w.addEventListener('scroll', onWrap)
-    h.addEventListener('scroll', onH)
+    w.addEventListener('scroll', onWrap, { passive: true })
+    h.addEventListener('scroll', onH, { passive: true })
     return () => { w.removeEventListener('scroll', onWrap); h.removeEventListener('scroll', onH) }
   }, [spacerW])
 
   return (
-    <div className="wm-wrap" ref={wrapRef}>
+    <div className={`wm-wrap${dragging ? ' dragging' : ''}`} ref={wrapRef}
+      onPointerDown={(e)=>{
+        dragRef.current.down = true
+        dragRef.current.dragging = false
+        dragRef.current.lastX = e.clientX
+      }}
+      onPointerMove={(e)=>{
+        if(!dragRef.current.down || !wrapRef.current) return
+        const dx = e.clientX - dragRef.current.lastX
+        if(!dragRef.current.dragging && Math.abs(dx) > 3){
+          dragRef.current.dragging = true
+          setDragging(true)
+        }
+        if(dragRef.current.dragging){
+          wrapRef.current.scrollLeft -= dx
+          dragRef.current.lastX = e.clientX
+        }
+      }}
+      onPointerUp={()=>{
+        dragRef.current.down = false
+        if(dragRef.current.dragging){
+          dragRef.current.dragging = false
+          setDragging(false)
+        }
+      }}
+      onPointerCancel={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
+      onPointerLeave={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
+    >
       <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: '96px', ['--leftWidth' as any]: '320px', ['--rightWidth' as any]: '140px' }}>
         <div className="wm-header">
           <div className="wm-corner">
             <div className="wm-corner-inner">
               <span>LUK / Week</span>
               {(()=>{
-                const anyOpen = Object.values(open).some(Boolean) || openCasus || openKennis
+                const anyOpen = Object.values(open).some(v=>v) || openCasus || openKennis
                 const toggleAll = () => {
                   const next = !anyOpen
                   setOpen(Object.fromEntries(evlForCourse.map(b=>[b.id, next])))

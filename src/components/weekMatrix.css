@@ -1,24 +1,25 @@
-.wm-wrap{ margin-top:16px; overflow:auto; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0 }
-.wm-table{ display:block; min-width:100%; width:100%; }
-.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) 1fr var(--rightWidth); background:var(--surface); z-index:7; left:0; width:100%; box-shadow: var(--sticky-shadow) }
+.wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
+.wm-wrap.dragging{ cursor:grabbing }
+.wm-table{ display:block; min-width:100%; width:max-content; }
+.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) auto var(--rightWidth); background:var(--surface); z-index:7; left:0; width:100%; box-shadow: var(--sticky-shadow) }
 .wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:1px solid rgba(255,255,255,.08); z-index:4 }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
-.wm-smallbtn{ background:rgba(255,255,255,.06); color:#e6ecff; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
+.wm-smallbtn{ background:rgba(47,111,235,0.10); color:#0E1320; border:1px solid rgba(47,111,235,.35); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(255,255,255,.12) }
-.wm-cols{ display:grid; grid-template-columns: repeat(var(--weeks), minmax(64px, 1fr)); width:100% }
+.wm-cols{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; border-bottom:1px solid var(--line) }
 .wm-col{ padding:10px 8px; text-align:center; border-right:1px solid var(--line-strong); color:var(--text) }
 .wm-col.holiday{ background:rgba(255, 200, 0, .16); font-weight:600 }
 .wm-body{ width:100%; display:block }
-.wm-row{ display:flex }
-.wm-evlhead{ display:flex; align-items:stretch }
+.wm-row{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) }
+.wm-evlhead{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); align-items:stretch }
 .wm-rowhead{ position:sticky; left:0; background:var(--surface); width:var(--leftWidth); min-width:var(--leftWidth); padding:10px; border-top:1px solid var(--line); border-right:1px solid var(--line-strong); z-index:2 }
-.wm-rowhead.evl{ font-weight:600; background:rgba(255,255,255,.04) }
+.wm-rowhead.evl{ font-weight:600; background:rgba(14,19,32,.08) }
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
-.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), minmax(64px, 1fr)); width:100% }
+.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content }
 .wm-cell{ height:50px; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
-.wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong) }
+.wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
 .wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface) }
 .sticky-right{ position:sticky; right:0; background:var(--surface); z-index:3; box-shadow: -4px 0 8px rgba(14,19,32,.06) }
 .wm-vcol.sticky-right{ z-index:8 } /* header VRAAK cel boven body-cellen */
@@ -33,7 +34,7 @@
 .sticky-bottom{ position:sticky }
 
 /* Simpele uitlijning: cellen naast kop (EVL/Casus/Kennis) dezelfde tint als kopcel */
-.wm-rowhead.evl{ background:rgba(255,255,255,.04) }
-.wm-evlhead .wm-cell{ background:rgba(255,255,255,.04) }
-.wm-evlhead .wm-vraak{ background:rgba(255,255,255,.04) }
+.wm-rowhead.evl{ background:var(--surface2) }
+.wm-evlhead .wm-cell{ background:var(--surface2) }
+.wm-evlhead .wm-vraak{ background:var(--surface2) }
 

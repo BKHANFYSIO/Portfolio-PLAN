@@ -1,7 +1,8 @@
-.detail{ padding:20px; height:100vh; box-sizing:border-box; display:flex; flex-direction:column }
+.detail{ padding:12px 16px; height:calc(100vh - 32px); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden }
 .detail-header{ display:flex; align-items:center; justify-content:space-between }
-.layout{ display:grid; grid-template-columns: 1fr; gap:16px; margin-top:16px; flex:1; min-height:0 }
-.center{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; height:100%; display:flex; flex-direction:column; min-height:0 }
+.detail-header h1{ margin:0 }
+.layout{ display:grid; grid-template-columns: 1fr; gap:12px; margin-top:8px; flex:1; min-height:0 }
+.center{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; height:100%; display:flex; flex-direction:column; min-height:0; overflow:hidden }
 .evl-title{ font-weight:600; margin-top:6px }
 .luk{ color:#9aa6c6; margin:6px 0 12px 18px }
 .timeline{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:6px; margin-top:6px }
