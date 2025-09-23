@@ -16,6 +16,7 @@ function App() {
   const [form, setForm] = useState({ name: '', year: years[0]?.year ?? 2025, courseId: curriculum.courses[0]?.id ?? '', periodType: 'periode', periodPeriode: '1', periodSemester: '1', periodStartWeek: '', periodEndWeek: '' })
   const [showBackup, setShowBackup] = useState(false)
   const [showRestore, setShowRestore] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(()=>{ ensureSeed(); setPlans(readJson(LS_KEYS.plans, [] as PortfolioPlan[])) }, [])
   useEffect(()=>{ applyTheme() }, [])
@@ -42,6 +43,7 @@ function App() {
     const v = e.target.value as any
     setTheme(v)
     setThemeSetting(v)
+    applyTheme()
   }
 
   return (
@@ -49,14 +51,8 @@ function App() {
       <header className="header">
         <h1>Portfolio Plan Fysiotherapie</h1>
         <div className="actions">
-          <select value={theme} onChange={onThemeChange} className="file-label">
-            <option value="system">Systeem</option>
-            <option value="dark">Donker</option>
-            <option value="light">Licht</option>
-          </select>
           <button onClick={()=>setShowDialog(true)}>Nieuw portfolio plan</button>
-          <button onClick={()=>setShowBackup(true)}>Backup maken</button>
-          <button className="file-label" onClick={()=>setShowRestore(true)}>Backup terugzetten</button>
+          <button className="file-label" onClick={()=>setShowSettings(true)}>Instellingen</button>
         </div>
       </header>
 
@@ -142,6 +138,34 @@ function App() {
             <div className="dialog-actions">
               <button onClick={()=>setShowDialog(false)}>Annuleren</button>
               <button onClick={create}>Aanmaken</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div className="dialog-backdrop" onClick={()=>setShowSettings(false)}>
+          <div className="dialog" onClick={e=>e.stopPropagation()}>
+            <h3>Instellingen</h3>
+            <div className="grid">
+              <label>
+                <span>Thema</span>
+                <select value={theme} onChange={onThemeChange}>
+                  <option value="system">Systeem</option>
+                  <option value="dark">Donker</option>
+                  <option value="light">Licht</option>
+                </select>
+              </label>
+            </div>
+            <fieldset>
+              <legend>Backup</legend>
+              <div className="row2">
+                <button onClick={()=>{ setShowSettings(false); setShowBackup(true) }}>Backup maken</button>
+                <button className="file-label" onClick={()=>{ setShowSettings(false); setShowRestore(true) }}>Backup terugzetten</button>
+              </div>
+            </fieldset>
+            <div className="dialog-actions">
+              <button onClick={()=>setShowSettings(false)}>Sluiten</button>
             </div>
           </div>
         </div>
