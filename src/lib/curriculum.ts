@@ -1,4 +1,5 @@
 import { LS_KEYS, readJson, writeJson } from './storage';
+import * as XLSX from 'xlsx'
 
 export type Outcome = { id: string; name: string };
 export type EVL = { id: 'EVL1'|'EVL2'|'EVL3'|'EVL4'|'EVL5'; name: string; outcomes: Outcome[] };
@@ -138,6 +139,47 @@ export function getCurriculum(){
 }
 export function getYears(){
   return readJson(LS_KEYS.years, [seedYear(2025), seedYear(2026)]) as Array<{id:string;year:number;weeks:WeekInfo[]}>;
+}
+
+export async function importYearsFromPublic(): Promise<Array<{id:string;year:number;weeks:WeekInfo[]}>>{
+  try{
+    const idx = await fetch('/year-index.json').then(r=>r.json()) as string[]
+    const out: Array<{id:string;year:number;weeks:WeekInfo[]}> = []
+    for(const file of idx){
+      const res = await fetch(`/${encodeURIComponent(file)}`)
+      const buf = await res.arrayBuffer()
+      const wb = XLSX.read(buf)
+      const sheet = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { header:1 }) as any[][]
+      // heuristiek: zoek kolommen Year, Week, Start, End, Vakantie?
+      const header = rows[0].map(String)
+      const yIdx = header.findIndex(h=>/jaar|year/i.test(h))
+      const wIdx = header.findIndex(h=>/week/i.test(h))
+      const sIdx = header.findIndex(h=>/start/i.test(h))
+      const eIdx = header.findIndex(h=>/eind|end/i.test(h))
+      const holIdx = header.findIndex(h=>/vakantie|holiday/i.test(h))
+      const year = Number(rows[1]?.[yIdx] ?? new Date().getFullYear())
+      const weeks: WeekInfo[] = []
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i]
+        const wk = Number(r[wIdx])
+        if(!wk) continue
+        weeks.push({
+          week: wk,
+          label: `Week ${wk}`,
+          startISO: String(r[sIdx] ?? ''),
+          endISO: String(r[eIdx] ?? ''),
+          isHoliday: Boolean(r[holIdx]),
+          holidayLabel: Boolean(r[holIdx]) ? 'Vakantie' : undefined
+        })
+      }
+      out.push({ id:`year_${year}`, year, weeks })
+    }
+    writeJson(LS_KEYS.years, out)
+    return out
+  }catch{
+    return getYears()
+  }
 }
 
 
