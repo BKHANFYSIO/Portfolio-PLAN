@@ -23,7 +23,7 @@ button{ background:var(--primary); border:none; color:white; padding:8px 12px; b
 
 /* Buttons with icons */
 .btn{ background:#4f7cff; color:#fff; padding:8px 12px; border:none; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:8px }
-.btn .icon{ width:16px; height:16px; fill: currentColor; display:inline-block }
+.btn .icon{ width:16px; height:16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display:inline-block }
 
 .dialog-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center }
 .dialog{ background:var(--surface); border:1px solid rgba(255,255,255,.1); border-radius:12px; width:min(720px,92vw); padding:16px }
