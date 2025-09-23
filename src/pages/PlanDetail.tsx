@@ -79,10 +79,22 @@ export default function PlanDetail(){
           <div className="muted">{plan.year} · {plan.courseName} · {localPeriod?.label}</div>
         </div>
         <div className="actions">
-          <Link className="btn" to="/">Terug</Link>
-          <button className="btn" onClick={()=>setShowAdd(true)}>Bewijsstuk toevoegen</button>
-          <button className="btn" onClick={()=>setShowList(true)}>Alle bewijsstukken</button>
-          <button className="btn" onClick={openEdit}>Bewerken</button>
+          <Link className="btn" to="/">
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            Terug
+          </Link>
+          <button className="btn" onClick={()=>setShowAdd(true)}>
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Bewijsstuk toevoegen
+          </button>
+          <button className="btn" onClick={()=>setShowList(true)}>
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            Alle bewijsstukken
+          </button>
+          <button className="btn" onClick={openEdit}>
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+            Bewerken
+          </button>
         </div>
       </header>
 
