@@ -1,0 +1,17 @@
+.detail{ padding:20px; height:100vh; box-sizing:border-box; display:flex; flex-direction:column }
+.detail-header{ display:flex; align-items:center; justify-content:space-between }
+.layout{ display:grid; grid-template-columns: 1fr; gap:16px; margin-top:16px; flex:1; min-height:0 }
+.center{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; height:100%; display:flex; flex-direction:column; min-height:0 }
+.evl-title{ font-weight:600; margin-top:6px }
+.luk{ color:#9aa6c6; margin:6px 0 12px 18px }
+.timeline{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:6px; margin-top:6px }
+.week{ background:rgba(79,124,255,.18); border:1px solid rgba(79,124,255,.35); border-radius:8px; padding:10px; text-align:center; user-select:none }
+.week.edit{ cursor:pointer; outline:2px dashed rgba(79,124,255,.6) }
+.muted{ color:#9aa6c6 }
+.small{ font-size:12px }
+.btn{ background:#4f7cff; color:#fff; padding:8px 12px; border:none; border-radius:10px; text-decoration:none }
+
+/* eenvoudige modal */
+.modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:50 }
+.modal{ background:var(--surface); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:16px; min-width:320px; max-height:80vh; overflow:auto }
+
