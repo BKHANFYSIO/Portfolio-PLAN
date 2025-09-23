@@ -100,7 +100,7 @@ export default function PlanDetail(){
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
     const idx = plans.findIndex(p=>p.id===plan.id)
     if(idx>=0){
-      plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map(a=> a.id===editArtifactId ? ({ ...a, name: editArtifactName.trim()||a.name, week: Number(editArtifactWeek), evlOutcomeIds: editArtifactEvl, caseIds: editArtifactCases, knowledgeIds: editArtifactKnowl, vraak: editArtifactVraak, updatedAt: Date.now() }) : a), updatedAt: Date.now() }
+      plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map((a:any)=> a.id===editArtifactId ? ({ ...a, name: editArtifactName.trim()||a.name, week: Number(editArtifactWeek), evlOutcomeIds: editArtifactEvl, caseIds: editArtifactCases, knowledgeIds: editArtifactKnowl, vraak: editArtifactVraak, updatedAt: Date.now() }) : a), updatedAt: Date.now() }
       writeJson(LS_KEYS.plans, plans)
       // update lokaal object zodat lijst ververst
       const aIdx = (plan.artifacts||[]).findIndex((a:any)=>a.id===editArtifactId)
@@ -186,7 +186,7 @@ export default function PlanDetail(){
     if(idx>=0){
       // waarschuwing als artifacts buiten het nieuwe bereik vallen
       const visible = new Set(getVisibleWeekNumbers(nextPeriod))
-      const outside = (plans[idx].artifacts||[]).filter(a=> !visible.has(a.week)).map(a=>a.id)
+      const outside = (plans[idx].artifacts||[]).filter((a:any)=> !visible.has(a.week)).map((a:any)=>a.id)
       plans[idx] = { ...plans[idx], name: editForm.name.trim() || 'Naamloos', period: nextPeriod, updatedAt: Date.now() }
       writeJson(LS_KEYS.plans, plans)
       setOutOfRangeIds(outside.length ? outside : null)
@@ -322,10 +322,10 @@ export default function PlanDetail(){
             <h3>Alle bewijsstukken</h3>
             {(() => {
               const visibleSet = new Set(getVisibleWeekNumbers({ ...plan.period }))
-              const outside = (plan.artifacts||[]).filter(a=> !visibleSet.has(a.week))
+              const outside = (plan.artifacts||[]).filter((a:any)=> !visibleSet.has(a.week))
               const weeksMap = new Map<number, any[]>()
               for(const w of yearWeeks){ weeksMap.set(w.week, []) }
-              for(const a of (plan.artifacts||[])){
+              for(const a of (plan.artifacts||[] as any[])){
                 if(!visibleSet.has(a.week)) continue
                 const arr = weeksMap.get(a.week)
                 if(arr) arr.push(a)
@@ -354,7 +354,7 @@ export default function PlanDetail(){
                       <li key={w.week} style={{padding:'6px 0'}}>
                         <div className="muted" style={{fontSize:12}}>{w.code||w.label}</div>
                         <ul>
-                          {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map(a => (
+                          {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
                             <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
                               <span>{a.name}</span>
                               <span>

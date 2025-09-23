@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+ 
 import { getCurriculum } from '../lib/curriculum'
 import * as XLSX from 'xlsx'
 
@@ -52,7 +52,7 @@ export default function Admin(){
         ))}
       </ul>
       <div className="muted" style={{marginTop:12, fontSize:12}}>
-        Kolommen in het Excel-bestand: Naam, EVL (bijv. "1.2, 2.1"), Casussen, Kennis, Variatie, Relevantie, Authenticiteit, Actualiteit, Kwantiteit.
+        Kolommen in het Excel-bestand: Naam, EVL (bijv. "1.2, 2.1"), Casussen, Kennis, Variatie, Relevantie, Authenticiteit, Actualiteit, Kwantiteit, Soort.
       </div>
     </div>
   )
