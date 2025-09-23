@@ -16,11 +16,11 @@
 .wm-rowhead.evl{ font-weight:600; background:rgba(14,19,32,.08) }
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
-.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content }
-.wm-cell{ height:46px; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
+.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch }
+.wm-cell{ min-height:46px; height:auto; padding:10px 0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
 .wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
-.wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface) }
+.wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
 .sticky-right{ position:sticky; right:0; background:var(--surface); z-index:3; box-shadow: -4px 0 8px rgba(14,19,32,.06) }
 .wm-vcol.sticky-right{ z-index:8 } /* header VRAAK cel boven body-cellen */
 .wm-chip{ background:var(--tint-weak); border:1px solid rgba(79,124,255,.45); color:var(--text); padding:2px 6px; border-radius:999px; font-size:12px }
