@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { LS_KEYS, readJson } from '../lib/storage'
 import type { PortfolioPlan } from '../lib/storage'
 

@@ -35,8 +35,7 @@ export default function PlanDetail(){
     outcomes: block.outcomes.filter(o=> !evlExcluded.includes(o.id))
   }) : block)
 
-  // Tijdlijn weken (simplified) op basis van gekozen jaar; voor nu 1..12 als placeholder
-  const timelineWeeks = Array.from({length:12},(_,i)=>i+1)
+  // placeholder timelineWeeks verwijderd (niet gebruikt)
 
   function toggleEdit(){
     const next = !isEdit

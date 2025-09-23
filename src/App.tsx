@@ -36,29 +36,6 @@ function App() {
     setForm({ ...form, name: '' });
   }
 
-  function backup(){
-    const data = { plans, curriculum, years };
-    const blob = new Blob([JSON.stringify(data,null,2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'portfolio-backup.json'; a.click(); URL.revokeObjectURL(a.href);
-  }
-
-  function restore(e: React.ChangeEvent<HTMLInputElement>){
-    const f = e.target.files?.[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try{
-        const json = JSON.parse(String(reader.result||'{}'));
-        if(json.plans) writeJson(LS_KEYS.plans, json.plans);
-        if(json.curriculum) writeJson(LS_KEYS.curriculum, json.curriculum);
-        if(json.years) writeJson(LS_KEYS.years, json.years);
-        setPlans(readJson(LS_KEYS.plans, []));
-        alert('Backup hersteld');
-      }catch{ alert('Ongeldige JSON'); }
-    };
-    reader.readAsText(f);
-  }
-
   // Simple theme switch in header for now (settings dialog komt hierna)
   const [theme, setTheme] = useState(getThemeSetting())
   function onThemeChange(e: React.ChangeEvent<HTMLSelectElement>){

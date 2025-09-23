@@ -34,7 +34,7 @@ export default function WeekMatrix({ plan }: Props){
     return all
   }, [plan.year, years, plan.period])
 
-  const rows = useMemo(()=> evlForCourse.flatMap(b => b.outcomes.map(o => ({ evlId: b.id, lukId: o.id, name: o.name }))), [evlForCourse])
+  // const rows = useMemo(()=> evlForCourse.flatMap(b => b.outcomes.map(o => ({ evlId: b.id, lukId: o.id, name: o.name }))), [evlForCourse])
   const [openCasus, setOpenCasus] = useState<boolean>(true)
   const [openKennis, setOpenKennis] = useState<boolean>(false)
 
