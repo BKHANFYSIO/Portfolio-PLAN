@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { LS_KEYS, readJson, writeJson } from '../lib/storage'
-import { getCurriculum, getYears } from '../lib/curriculum'
 import './planDetail.css'
 import AddArtifactDialog from '../components/AddArtifactDialog'
 import WeekMatrix from '../components/WeekMatrix'
@@ -11,8 +10,7 @@ export default function PlanDetail(){
   const [params, setParams] = useSearchParams()
   const plans = readJson(LS_KEYS.plans, [] as any[])
   const plan = plans.find(p=>p.id===id)
-  const years = getYears()
-  const { evl, courses } = getCurriculum()
+  // verwijderde curriculum/year reads (niet nodig op deze pagina)
   const initialEdit = params.get('edit') === '1'
   const [isEdit, setIsEdit] = useState(initialEdit)
   const [dirty, setDirty] = useState(false)
@@ -28,12 +26,7 @@ export default function PlanDetail(){
     )
   }
 
-  const course = courses.find(c=>c.id===plan.courseId)
-  const evlExcluded = course?.evlOverrides?.EVL1 || []
-  const evlForCourse = evl.map(block => block.id==='EVL1' ? ({
-    ...block,
-    outcomes: block.outcomes.filter(o=> !evlExcluded.includes(o.id))
-  }) : block)
+  // EVL/course-afleidingen gebeuren binnen WeekMatrix
 
   // placeholder timelineWeeks verwijderd (niet gebruikt)
 
