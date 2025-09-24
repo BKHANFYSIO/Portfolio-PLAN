@@ -1,4 +1,3 @@
-import React from 'react'
 
 export type KindKey = 'certificaat'|'schriftelijk'|'kennistoets'|'vaardigheid'|'performance'|'gesprek'|'document'|'toets'|'overig'|string|undefined
 export type PerspectiveKey = 'zelfreflectie'|'peer'|'ouderejaars'|'docent'|'extern'

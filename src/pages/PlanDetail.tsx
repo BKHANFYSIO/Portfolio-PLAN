@@ -342,7 +342,7 @@ export default function PlanDetail(){
                     <div style={{marginBottom:12}}>
                       <div style={{fontWeight:600, marginBottom:6}}>Buiten geselecteerde weken</div>
                       <ul>
-                        {outside.sort((a:any,b:any)=>a.week-b.week).map((a:any)=> (
+                        {outside.sort((a:any,b:any)=> (a as any).week - (b as any).week).map((a:any)=> (
                           <li key={a.id} style={{padding:'6px 0', display:'flex', justifyContent:'space-between', gap:8}}>
                             <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
                               <KindIcon kind={a.kind} /> {a.name}
