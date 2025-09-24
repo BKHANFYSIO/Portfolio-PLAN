@@ -6,7 +6,7 @@ import './planDetail.css'
 import AddArtifactDialog from '../components/AddArtifactDialog'
 import WeekMatrix from '../components/WeekMatrix'
 import { getYears } from '../lib/curriculum'
-import { KindIcon } from '../components/icons'
+import { KindIcon, PerspectiveIcon } from '../components/icons'
 import { getCurriculum } from '../lib/curriculum'
 
 export default function PlanDetail(){
@@ -339,7 +339,14 @@ export default function PlanDetail(){
                       <ul>
                         {outside.sort((a:any,b:any)=>a.week-b.week).map((a:any)=> (
                           <li key={a.id} style={{padding:'6px 0', display:'flex', justifyContent:'space-between', gap:8}}>
-                            <span>{a.name}</span>
+                            <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
+                              <KindIcon kind={a.kind} /> {a.name}
+                              {Array.isArray(a.perspectives) && a.perspectives.length>0 && (
+                                <span style={{display:'inline-flex',alignItems:'center',gap:6, marginLeft:6}}>
+                                  {a.perspectives.map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                                </span>
+                              )}
+                            </span>
                             <span>
                               <button className="file-label" onClick={()=>startEditArtifact(a)}>Bewerken</button>
                               <button className="danger" style={{marginLeft:6}} onClick={()=>deleteArtifact(a.id)}>Verwijderen</button>
@@ -357,9 +364,12 @@ export default function PlanDetail(){
                         <ul>
                       {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
                         <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
-                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><KindIcon kind={a.kind} /> {a.name}
+                          <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
+                            <KindIcon kind={a.kind} /> {a.name}
                             {Array.isArray(a.perspectives) && a.perspectives.length>0 && (
-                              <span className="muted" style={{fontSize:12, marginLeft:8}}>· {a.perspectives.join(', ')}</span>
+                              <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                                {a.perspectives.map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                              </span>
                             )}
                           </span>
                               <span>
