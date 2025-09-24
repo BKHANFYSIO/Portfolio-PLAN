@@ -328,7 +328,8 @@ export default function PlanDetail(){
       {showList && (
         <div className="modal-backdrop" onClick={()=>setShowList(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3>Alle bewijsstukken</h3>
+            <div className="modal-header"><h3 style={{margin:0}}>Alle bewijsstukken</h3></div>
+            <div className="modal-body">
             {(() => {
               const visibleSet = new Set(getVisibleWeekNumbers({ ...plan.period }))
               const outside = (plan.artifacts||[]).filter((a:any)=> !visibleSet.has(a.week))
@@ -397,7 +398,8 @@ export default function PlanDetail(){
                 </>
               )
             })()}
-            <div style={{marginTop:12, textAlign:'right'}}>
+            </div>
+            <div className="modal-footer">
               <button className="btn" onClick={()=>setShowList(false)}>Sluiten</button>
             </div>
           </div>
