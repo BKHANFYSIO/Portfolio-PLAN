@@ -89,7 +89,10 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Portfolio Plan Fysiotherapie</h1>
+        <div className="brand">
+          <img src="/Images/Logo-HAN.webp" alt="HAN" />
+          <h1>Portfolio planner Fysiotherapie</h1>
+        </div>
         <div className="actions">
           <button onClick={()=>setShowDialog(true)}>Nieuw portfolio plan</button>
           <button className="file-label" onClick={()=>setShowSettings(true)}>Instellingen</button>
