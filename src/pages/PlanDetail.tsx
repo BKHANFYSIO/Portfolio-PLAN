@@ -370,12 +370,14 @@ export default function PlanDetail(){
                       {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
                         <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
                           <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
-                            <KindIcon kind={a.kind} /> {a.name}
-                            {Array.isArray(a.perspectives) && a.perspectives.length>0 && (
-                              <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                                {a.perspectives.map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
-                              </span>
-                            )}
+                            <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
+                              <KindIcon kind={a.kind} />
+                              {Array.isArray(a.perspectives) && a.perspectives.slice(0,3).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                              {Array.isArray(a.perspectives) && a.perspectives.length>3 && (
+                                <span className="muted" style={{fontSize:10}}>+{a.perspectives.length-3}</span>
+                              )}
+                            </span>
+                            {a.name}
                           </span>
                               <span>
                                 <button className="file-label" onClick={()=>startEditArtifact(a)}>Bewerken</button>
