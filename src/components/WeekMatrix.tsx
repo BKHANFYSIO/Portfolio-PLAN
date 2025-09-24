@@ -165,7 +165,7 @@ export default function WeekMatrix({ plan }: Props){
               })()}
             </div>
           </div>
-          <div className="wm-cols" style={{borderLeft:'1px solid var(--line-strong)'}}>
+          <div className="wm-cols">
             {weeks.map(w=> {
               const y = years.find(y=>y.year===plan.year)
               const info = y?.weeks.find(ww=> ww.week===w)
