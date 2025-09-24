@@ -430,9 +430,9 @@ export default function PlanDetail(){
               <legend>Perspectieven</legend>
               <div>
                 <label style={{display:'inline-flex',gap:6,marginRight:12}}>
-                  <input type="checkbox" checked={(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives?.length===0 || !(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives}
+                  <input type="checkbox" checked={(plan.artifacts||[]).find((a:any)=>a.id===editArtifactId)?.perspectives?.length===0 || !(plan.artifacts||[]).find((a:any)=>a.id===editArtifactId)?.perspectives}
                     onChange={()=>{
-                      const current = (plan.artifacts||[]).find(a=>a.id===editArtifactId)
+                      const current = (plan.artifacts||[]).find((a:any)=>a.id===editArtifactId)
                       if(!current) return
                       const next: any[] = []
                       setEditArtifactPersp(next as any)
@@ -448,11 +448,11 @@ export default function PlanDetail(){
                 </label>
                 {(['zelfreflectie','peer','ouderejaars','docent','extern'] as const).map(p => (
                   <label key={p} style={{display:'inline-flex',gap:6,marginRight:12}}>
-                    <input type="checkbox" checked={(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives?.includes(p) || false}
+                    <input type="checkbox" checked={(plan.artifacts||[]).find((a:any)=>a.id===editArtifactId)?.perspectives?.includes(p) || false}
                       onChange={()=>{
-                        const current = (plan.artifacts||[]).find(a=>a.id===editArtifactId)
+                        const current = (plan.artifacts||[]).find((a:any)=>a.id===editArtifactId)
                         if(!current) return
-                        let next = current.perspectives?.includes(p) ? (current.perspectives||[]).filter(x=>x!==p) : ([...(current.perspectives||[]), p])
+                        let next = current.perspectives?.includes(p) ? (current.perspectives||[]).filter((x:any)=>x!==p) : ([...(current.perspectives||[]), p])
                         if(next.length>0){ next = next.filter(Boolean) }
                         setEditArtifactId(editArtifactId) // force rerender
                         setEditArtifactPersp(next as any)
