@@ -2,7 +2,8 @@ export const LS_KEYS = {
   plans: 'pf-portfolio-plans',
   curriculum: 'pf-curriculum',
   years: 'pf-year-planners',
-  ui: 'pf-ui-preferences'
+  ui: 'pf-ui-preferences',
+  help: 'pf-help-seen'
 } as const;
 
 export type VraakScore = {

@@ -17,6 +17,7 @@ function App() {
   const [showBackup, setShowBackup] = useState(false)
   const [showRestore, setShowRestore] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   type UiPrefs = { sortBy: 'alpha'|'created'|'updated'; sortDir: 'asc'|'desc' }
   const [uiPrefs, setUiPrefs] = useState<UiPrefs>(()=> readJson<UiPrefs>(LS_KEYS.ui, { sortBy: 'updated', sortDir: 'desc' }))
@@ -38,6 +39,14 @@ function App() {
     if(changed) writeJson(LS_KEYS.plans, migrated)
   }, [])
   useEffect(()=>{ applyTheme() }, [])
+  // Eerste bezoek: uitleg tonen
+  useEffect(()=>{
+    const seen = readJson<boolean>(LS_KEYS.help, false)
+    if(!seen){
+      setShowHelp(true)
+      writeJson(LS_KEYS.help, true)
+    }
+  }, [])
 
   function save(pls: PortfolioPlan[]){ setPlans(pls); writeJson(LS_KEYS.plans, pls); }
   function savePrefs(next: UiPrefs){ setUiPrefs(next); writeJson(LS_KEYS.ui, next) }
@@ -96,6 +105,7 @@ function App() {
         <div className="actions">
           <button onClick={()=>setShowDialog(true)}>Nieuw portfolio plan</button>
           <button className="file-label" onClick={()=>setShowSettings(true)}>Instellingen</button>
+          <button className="file-label" onClick={()=>setShowHelp(true)}>Uitleg</button>
         </div>
       </header>
 
@@ -247,6 +257,26 @@ function App() {
 
       {showBackup && <BackupDialog onClose={()=>setShowBackup(false)} />}
       {showRestore && <RestoreDialog onClose={()=>setShowRestore(false)} onRestored={()=> setPlans(readJson(LS_KEYS.plans, [] as PortfolioPlan[])) } />}
+      {showHelp && (
+        <div className="dialog-backdrop" onClick={()=>setShowHelp(false)}>
+          <div className="dialog" onClick={e=>e.stopPropagation()}>
+            <div style={{background:'rgba(79,124,255,.15)', border:'1px solid rgba(79,124,255,.35)', color:'var(--text)', padding:10, borderRadius:8, marginBottom:10}}>
+              Dit venster verschijnt alleen bij je eerste bezoek. Je kunt het altijd later terugvinden via de knop ‘Uitleg’.
+            </div>
+            <h3>Uitleg</h3>
+            <div style={{display:'grid', gap:8}}>
+              <p>Deze app is een hulpmiddel om tot een portfolio plan te komen. Je mag het ook op je eigen manier doen.</p>
+              <p>Het is verstandig om bij de start van een cursus een portfolio plan te maken, dat in je eJournal bij EVL4 te plaatsen, feedback te vragen in een gesprek met een medestudent of docent en daarop te reflecteren.</p>
+              <p>Je plannen worden lokaal op je eigen device in de browser opgeslagen. Maak regelmatig een backup via Instellingen om dataverlies te voorkomen.</p>
+              <p>Omdat gegevens lokaal zijn opgeslagen, kan niemand bij jouw plan tenzij je het deelt met je docenten.</p>
+              <p>Belangrijk: streef naar een portfolio plan waarbij de geplande datapunten als geheel goed scoren op de VRAAK-criteria.</p>
+            </div>
+            <div className="dialog-actions">
+              <button onClick={()=>setShowHelp(false)}>Sluiten</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
