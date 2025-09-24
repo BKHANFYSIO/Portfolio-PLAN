@@ -315,6 +315,7 @@ export default function WeekMatrix({ plan }: Props){
             ))}
           </div>
         </div>
+        <div className="wm-divider-left" />
       </div>
       <div className="wm-mask-left" />
       <div className="wm-hscroll sticky-bottom" ref={hScrollRef}>
