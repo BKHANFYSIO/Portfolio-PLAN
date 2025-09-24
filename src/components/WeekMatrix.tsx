@@ -151,7 +151,7 @@ export default function WeekMatrix({ plan }: Props){
                   setOpenCasus(next)
                   setOpenKennis(next)
                 }
-                return <button className="wm-smallbtn" onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
+                return <button className="wm-smallbtn" style={{maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}} onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
               })()}
             </div>
           </div>

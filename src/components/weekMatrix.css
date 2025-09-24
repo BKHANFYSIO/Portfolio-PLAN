@@ -2,7 +2,7 @@
 .wm-wrap.dragging{ cursor:grabbing }
 .wm-table{ display:block; min-width:100%; width:max-content; position:relative }
 .wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow) }
-.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:none; z-index:4 }
+.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:none; z-index:4; overflow:hidden }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(79,124,255,.28) }
@@ -30,7 +30,7 @@
 
 /* Artifact regels in subrijen */
 .wm-artlist{ width:100%; padding:6px 6px; display:flex; flex-direction:column; gap:4px }
-.wm-art{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; text-align:left; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.10); color:var(--text); padding:6px 6px; border-radius:8px; cursor:pointer }
+.wm-art{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; text-align:left; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.10); color:var(--text); padding:6px 6px; border-radius:8px; cursor:pointer; overflow:hidden }
 .wm-art .icons-row{ display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow:hidden; white-space:nowrap }
 .wm-art .icon{ flex:0 0 auto }
 .wm-art .sep{ width:1px; height:12px; background:var(--line-strong); display:inline-block }
