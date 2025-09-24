@@ -75,6 +75,7 @@ export default function WeekMatrix({ plan }: Props){
   const tableRef = useRef<HTMLDivElement>(null)
   const hScrollRef = useRef<HTMLDivElement>(null)
   const [spacerW, setSpacerW] = useState<number>(0)
+  const dividerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{down:boolean; dragging:boolean; lastX:number}>({down:false,dragging:false,lastX:0})
   const [dragging, setDragging] = useState(false)
 
@@ -86,6 +87,21 @@ export default function WeekMatrix({ plan }: Props){
       setSpacerW(Math.max(w, visible))
       if(hScrollRef.current && wrapRef.current){
         hScrollRef.current.scrollLeft = wrapRef.current.scrollLeft
+      }
+      // meet exacte pixelpositie van eerste weekkolom grens
+      if(tableRef.current){
+        const headerCols = tableRef.current.querySelector('.wm-cols') as HTMLElement | null
+        const firstWeekCell = headerCols?.children?.[0] as HTMLElement | null
+        if(firstWeekCell){
+          const rect = firstWeekCell.getBoundingClientRect()
+          const tableRect = tableRef.current.getBoundingClientRect()
+          const left = Math.round(rect.left - tableRect.left) + (firstWeekCell.offsetWidth ? 0 : 0)
+          if(dividerRef.current){
+            dividerRef.current.style.setProperty('--dividerLeftPx', `${left}px`)
+          }
+        }else if(dividerRef.current){
+          dividerRef.current.style.setProperty('--dividerLeftPx', `${getComputedStyle(tableRef.current).getPropertyValue('--leftWidth')}`)
+        }
       }
     }
     resize()
@@ -315,7 +331,7 @@ export default function WeekMatrix({ plan }: Props){
             ))}
           </div>
         </div>
-        <div className="wm-divider-left" />
+        <div className="wm-divider-left" ref={dividerRef} />
       </div>
       <div className="wm-mask-left" />
       <div className="wm-hscroll sticky-bottom" ref={hScrollRef}>

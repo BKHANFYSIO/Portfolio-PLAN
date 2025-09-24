@@ -17,7 +17,7 @@
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
 .wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch; padding-left:0 }
-.wm-cell{ min-height:46px; height:auto; padding:0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
+.wm-cell{ min-height:46px; height:auto; padding:0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:flex-start; justify-content:flex-start; color:var(--text) }
 .wm-row .wm-cells .wm-cell{ justify-content:flex-start; align-items:flex-start; padding:4px 6px }
 .wm-row .wm-cells .wm-cell:first-child{ padding-left:10px }
 .wm-evlhead .wm-cell{ justify-content:center; padding:0 }
@@ -59,5 +59,5 @@
 .wm-evlhead .wm-vraak{ background:var(--surface2) }
 
 /* Eén gedeelde scheidingslijn tussen linkerkolom en weken */
-.wm-divider-left{ position:absolute; top:0; bottom:0; left:var(--leftWidth); width:1px; background:var(--line-strong); z-index:11; pointer-events:none }
+.wm-divider-left{ position:absolute; top:0; bottom:0; left:var(--dividerLeftPx, var(--leftWidth)); width:1px; background:var(--line-strong); z-index:11; pointer-events:none }
 
