@@ -1,8 +1,8 @@
 .wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
 .wm-wrap.dragging{ cursor:grabbing }
 .wm-table{ display:block; min-width:100%; width:max-content; }
-.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow); align-items:stretch }
-.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:1px solid var(--line-strong); z-index:4 }
+.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow) }
+.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:1px solid rgba(255,255,255,.08); z-index:4 }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(79,124,255,.28) }
@@ -19,7 +19,7 @@
 .wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch; padding-left:0 }
 .wm-cell{ min-height:46px; height:auto; padding:0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
 .wm-row .wm-cells .wm-cell{ justify-content:flex-start; padding:4px 6px }
-.wm-row .wm-cells .wm-cell:first-child{ padding-left:8px }
+.wm-row .wm-cells .wm-cell:first-child{ padding-left:10px }
 .wm-evlhead .wm-cell{ justify-content:center; padding:0 }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
 .wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
