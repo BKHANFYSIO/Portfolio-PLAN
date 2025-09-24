@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useLocation } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { LS_KEYS, readJson, writeJson } from '../lib/storage'
@@ -14,6 +14,7 @@ import { getCurriculum } from '../lib/curriculum'
 
 export default function PlanDetail(){
   const { id } = useParams()
+  const loc = useLocation()
   const plans = readJson(LS_KEYS.plans, [] as any[])
   const plan = plans.find(p=>p.id===id)
   // verwijderde curriculum/year reads (niet nodig op deze pagina)
@@ -204,6 +205,59 @@ export default function PlanDetail(){
     setShowEdit(false)
   }
 
+  async function exportPdf(){
+    const container = document.querySelector('.center') as HTMLElement | null
+    if(!container) return
+    const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
+    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+    const img = canvas.toDataURL('image/png')
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
+    const w = canvas.width * ratio
+    const h = canvas.height * ratio
+    const x = (pageW - w)/2, y = (pageH - h)/2
+    doc.addImage(img, 'PNG', x, y, w, h)
+    for(const a of (plan.artifacts||[])){
+      doc.addPage('a4','landscape')
+      const wrap = document.createElement('div')
+      wrap.style.width = '1000px'
+      wrap.style.padding = '16px'
+      wrap.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
+      wrap.innerHTML = `
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
+        <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
+          <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
+          <div>Casus</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
+          <div>Kennis</div><div>${(a.knowledgeIds||[]).join(', ')||'—'}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:6px">
+          <div>Variatie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.variatie||0)/5*100}%"></div></div></div>
+          <div>Relevantie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.relevantie||0)/5*100}%"></div></div></div>
+          <div>Authenticiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.authenticiteit||0)/5*100}%"></div></div></div>
+          <div>Actualiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.actualiteit||0)/5*100}%"></div></div></div>
+          <div>Kwantiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.kwantiteit||0)/5*100}%"></div></div></div>
+        </div>`
+      document.body.appendChild(wrap)
+      const c2 = await html2canvas(wrap, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+      const img2 = c2.toDataURL('image/png')
+      const r2 = Math.min(pageW / c2.width, pageH / c2.height)
+      const w2 = c2.width * r2, h2 = c2.height * r2
+      const x2 = (pageW - w2)/2, y2 = (pageH - h2)/2
+      doc.addImage(img2, 'PNG', x2, y2, w2, h2)
+      document.body.removeChild(wrap)
+    }
+    doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
+  }
+
+  useEffect(()=>{
+    const p = new URLSearchParams(loc.search)
+    if(p.get('export')==='pdf'){
+      setTimeout(()=>{ exportPdf() }, 300)
+    }
+  }, [loc.search])
+
   return (
     <div className="detail">
       <header className="detail-header">
@@ -220,53 +274,7 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Bewijsstuk toevoegen
           </button>
-          <button className="btn" onClick={async()=>{
-            // 1) Exporteer matrix viewport als pagina (landscape)
-            const container = document.querySelector('.center') as HTMLElement | null
-            if(!container) return
-            const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-            const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-            const img = canvas.toDataURL('image/png')
-            const pageW = doc.internal.pageSize.getWidth()
-            const pageH = doc.internal.pageSize.getHeight()
-            const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-            const w = canvas.width * ratio
-            const h = canvas.height * ratio
-            const x = (pageW - w)/2, y = (pageH - h)/2
-            doc.addImage(img, 'PNG', x, y, w, h)
-            // 2) Voeg detailpagina's toe voor elk bewijsstuk (zelfde stijl als preview)
-            for(const a of (plan.artifacts||[])){
-              doc.addPage('a4','landscape')
-              const wrap = document.createElement('div')
-              wrap.style.width = '1000px'
-              wrap.style.padding = '16px'
-              wrap.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
-              wrap.innerHTML = `
-                <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
-                <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
-                <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
-                  <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
-                  <div>Casus</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
-                  <div>Kennis</div><div>${(a.knowledgeIds||[]).join(', ')||'—'}</div>
-                </div>
-                <div style="display:grid;grid-template-columns:120px 1fr;gap:6px">
-                  <div>Variatie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.variatie||0)/5*100}%"></div></div></div>
-                  <div>Relevantie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.relevantie||0)/5*100}%"></div></div></div>
-                  <div>Authenticiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.authenticiteit||0)/5*100}%"></div></div></div>
-                  <div>Actualiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.actualiteit||0)/5*100}%"></div></div></div>
-                  <div>Kwantiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.kwantiteit||0)/5*100}%"></div></div></div>
-                </div>`
-              document.body.appendChild(wrap)
-              const c2 = await html2canvas(wrap, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-              const img2 = c2.toDataURL('image/png')
-              const r2 = Math.min(pageW / c2.width, pageH / c2.height)
-              const w2 = c2.width * r2, h2 = c2.height * r2
-              const x2 = (pageW - w2)/2, y2 = (pageH - h2)/2
-              doc.addImage(img2, 'PNG', x2, y2, w2, h2)
-              document.body.removeChild(wrap)
-            }
-            doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
-          }}>
+          <button className="btn" onClick={exportPdf}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16l-6-3-6 3V4a2 2 0 0 1 2-2z"/></svg>
             Exporteer PDF
           </button>
