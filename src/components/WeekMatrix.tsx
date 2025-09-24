@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { PortfolioPlan } from '../lib/storage'
+import type { PortfolioPlan, Artifact } from '../lib/storage'
 import { getCurriculum, getYears } from '../lib/curriculum'
 import './weekMatrix.css'
 import { KindIcon, PerspectiveIcon } from './icons'
 
-type Props = { plan: PortfolioPlan }
+type Props = { plan: PortfolioPlan; onEdit?: (a: Artifact)=>void }
 
-export default function WeekMatrix({ plan }: Props){
+export default function WeekMatrix({ plan, onEdit }: Props){
   const { evl, courses } = getCurriculum()
   const years = getYears()
   const course = courses.find(c=>c.id===plan.courseId)
@@ -75,9 +75,36 @@ export default function WeekMatrix({ plan }: Props){
   const tableRef = useRef<HTMLDivElement>(null)
   const hScrollRef = useRef<HTMLDivElement>(null)
   const [spacerW, setSpacerW] = useState<number>(0)
-  const dividerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{down:boolean; dragging:boolean; lastX:number}>({down:false,dragging:false,lastX:0})
   const [dragging, setDragging] = useState(false)
+
+  // Preview modal state
+  const [preview, setPreview] = useState<{ title: string; artifacts: Artifact[] } | null>(null)
+  function openPreview(arts: Artifact[], title: string){
+    setPreview({ title, artifacts: arts })
+  }
+  useEffect(()=>{
+    const onKey = (e: KeyboardEvent) => { if(e.key==='Escape') setPreview(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Helpers for names
+  const outcomeNameById = useMemo(()=>{
+    const m = new Map<string,string>()
+    evlForCourse.forEach(b=> b.outcomes.forEach(o=> m.set(o.id, o.name)))
+    return m
+  }, [evlForCourse])
+  const caseNameById = useMemo(()=>{
+    const m = new Map<string,string>()
+    course?.cases.forEach(c=> m.set(c.id, c.name))
+    return m
+  }, [course])
+  const knowlNameById = useMemo(()=>{
+    const m = new Map<string,string>()
+    course?.knowledgeDomains.forEach(k=> m.set(k.id, k.name))
+    return m
+  }, [course])
 
   useEffect(()=>{
     const resize = () => {
@@ -87,21 +114,6 @@ export default function WeekMatrix({ plan }: Props){
       setSpacerW(Math.max(w, visible))
       if(hScrollRef.current && wrapRef.current){
         hScrollRef.current.scrollLeft = wrapRef.current.scrollLeft
-      }
-      // meet exacte pixelpositie van eerste weekkolom grens
-      if(tableRef.current){
-        const headerCols = tableRef.current.querySelector('.wm-cols') as HTMLElement | null
-        const firstWeekCell = headerCols?.children?.[0] as HTMLElement | null
-        if(firstWeekCell){
-          const rect = firstWeekCell.getBoundingClientRect()
-          const tableRect = tableRef.current.getBoundingClientRect()
-          const left = Math.round(rect.left - tableRect.left) + (firstWeekCell.offsetWidth ? 0 : 0)
-          if(dividerRef.current){
-            dividerRef.current.style.setProperty('--dividerLeftPx', `${left}px`)
-          }
-        }else if(dividerRef.current){
-          dividerRef.current.style.setProperty('--dividerLeftPx', `${getComputedStyle(tableRef.current).getPropertyValue('--leftWidth')}`)
-        }
       }
     }
     resize()
@@ -126,7 +138,16 @@ export default function WeekMatrix({ plan }: Props){
   }, [spacerW])
 
   return (
+    <>
     <div className={`wm-wrap${dragging ? ' dragging' : ''}`} ref={wrapRef}
+      onWheel={(e)=>{
+        if(!wrapRef.current) return
+        if(e.shiftKey){
+          e.preventDefault()
+          const horizontalDelta = (e.deltaX || 0) + (e.deltaY || 0)
+          wrapRef.current.scrollLeft += horizontalDelta
+        }
+      }}
       onPointerDown={(e)=>{
         dragRef.current.down = true
         dragRef.current.dragging = false
@@ -167,7 +188,7 @@ export default function WeekMatrix({ plan }: Props){
                   setOpenCasus(next)
                   setOpenKennis(next)
                 }
-                return <button className="wm-smallbtn" style={{maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}} onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
+                return <button className="wm-smallbtn" onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
               })()}
             </div>
           </div>
@@ -175,10 +196,11 @@ export default function WeekMatrix({ plan }: Props){
             {weeks.map(w=> {
               const y = years.find(y=>y.year===plan.year)
               const info = y?.weeks.find(ww=> ww.week===w)
-              const base = info?.code ? info.code : `W${w}`
-              const label = info?.isHoliday ? `${base}*` : base
-              const ext = info?.kind==='zero' ? ' · 0-week' : (info?.isHoliday ? ' · Vakantie' : '')
-              const title = info ? `${info.label} · ${info.startISO}${info.endISO && info.endISO!==info.startISO ? ' — '+info.endISO : ''}${ext}` : base
+              const baseCode = info?.code ? info.code : `W${w}`
+              const label = info?.isHoliday ? 'vak..' : baseCode
+              const titleBase = info?.isHoliday ? (info?.holidayLabel || 'Vakantie') : (info?.label || baseCode)
+              const ext = info?.kind==='zero' ? ' · 0-week' : ''
+              const title = info ? `${titleBase} · ${info.startISO}${info.endISO && info.endISO!==info.startISO ? ' — '+info.endISO : ''}${ext}` : baseCode
               return <div key={w} className={`wm-col ${info?.isHoliday ? 'holiday':''}`} title={title}>{label}</div>
             })}
           </div>
@@ -191,11 +213,11 @@ export default function WeekMatrix({ plan }: Props){
                 <div className="wm-rowhead evl">
                   <span className={open[block.id] ? 'caret down' : 'caret'} /> {block.id} · {block.name}
                 </div>
-                <div className="wm-cells">
+                <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                   {weeks.map(w => {
                     const outcomeIds = block.outcomes.map(o=>o.id)
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.evlOutcomeIds.some(id=> outcomeIds.includes(id)))
-                    return <div key={`evlh-${block.id}-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> alert(`${list.map(a=>a.name).join(', ')}`)}>{list.length}</button>}</div>
+                return <div key={`evlh-${block.id}-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — week ${w}`) }}>{list.length}</button>}</div>
                   })}
                 </div>
                 <div className="wm-vraak sticky-right">
@@ -220,14 +242,42 @@ export default function WeekMatrix({ plan }: Props){
                         {list.length>0 ? (
                           <div className="wm-artlist">
                             {list.map((a:any)=> (
-                              <button key={a.id} className="wm-art" title={a.name} onClick={()=> alert(`VRAAK – variatie:${a.vraak?.variatie||'-'} relev:${a.vraak?.relevantie||'-'} auth:${a.vraak?.authenticiteit||'-'} act:${a.vraak?.actualiteit||'-'} kwan:${a.vraak?.kwantiteit||'-'}`)}>
-                                <div className="icons-row" title={`${a.name}\nSoort: ${a.kind||'-'}\nPerspectieven: ${Array.isArray(a.perspectives)?a.perspectives.join(', '):'-'}`}>
-                                  <KindIcon kind={a.kind} />
+                              <button
+                                key={a.id}
+                                className="wm-art"
+                                title={a.name}
+                                onMouseEnter={(e)=>{
+                                  const btn = e.currentTarget
+                                  const cell = btn.closest('.wm-cell') as HTMLElement | null
+                                  if(!cell) return
+                                  // plaats een placeholder om de oorspronkelijke ruimte te reserveren
+                                  const ph = document.createElement('div')
+                                  ph.className = 'wm-art-placeholder'
+                                  ph.style.height = `${btn.offsetHeight}px`
+                                  btn.after(ph)
+                                  const btnRect = btn.getBoundingClientRect()
+                                  const cellRect = cell.getBoundingClientRect()
+                                  const topOffset = btnRect.top - cellRect.top
+                                  btn.style.top = `${Math.max(4, topOffset)}px`
+                                  btn.classList.add('wm-art--floating')
+                                }}
+                                onMouseLeave={(e)=>{
+                                  const btn = e.currentTarget
+                                  btn.classList.remove('wm-art--floating')
+                                  btn.style.top = ''
+                                  const next = btn.nextSibling as HTMLElement | null
+                                  if(next && next.classList && next.classList.contains('wm-art-placeholder')){
+                                    next.remove()
+                                  }
+                                }}
+                                onClick={()=> openPreview([a] as any, a.name)}
+                              >
+                                <div className="icons-row">
+                                  <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
                                   <span className="sep" />
-                                  {Array.isArray(a.perspectives) && a.perspectives.slice(0,3).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
-                                  {Array.isArray(a.perspectives) && a.perspectives.length>3 && (
-                                    <span className="more">+{a.perspectives.length-3}</span>
-                                  )}
+                                  {Array.isArray(a.perspectives) && a.perspectives.map((p:string)=> (
+                                    <span key={p} title={p}><PerspectiveIcon p={p as any} /></span>
+                                  ))}
                                 </div>
                                 <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
@@ -253,12 +303,12 @@ export default function WeekMatrix({ plan }: Props){
 
           {/* Casussen sectie */}
           <div>
-            <div className="wm-evlhead" onClick={()=>setOpenCasus(v=>!v)}>
+              <div className="wm-evlhead" onClick={()=>setOpenCasus(v=>!v)}>
               <div className="wm-rowhead evl"><span className={openCasus ? 'caret down':'caret'} /> Casussen</div>
-              <div className="wm-cells">
+              <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.length>0)
-                  return <div key={`cash-${w}`} className="wm-cell">{list.length>0 && <div className="wm-chip">{list.length}</div>}</div>
+                  return <div key={`cash-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Casussen — week ${w}`)}>{list.length}</button>}</div>
                 })}
               </div>
               <div className="wm-vraak sticky-right">
@@ -276,7 +326,7 @@ export default function WeekMatrix({ plan }: Props){
                 <div className="wm-cells">
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.includes(c.id))
-                    return <div key={w} className="wm-cell">{list.length>0 && <div className="wm-chip">{list.length}</div>}</div>
+                    return <div key={w} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `${c.name} — week ${w}`)}>{list.length}</button>}</div>
                   })}
                 </div>
                 <div className="wm-vraak sticky-right">
@@ -295,10 +345,10 @@ export default function WeekMatrix({ plan }: Props){
           <div>
             <div className="wm-evlhead" onClick={()=>setOpenKennis(v=>!v)}>
               <div className="wm-rowhead evl"><span className={openKennis ? 'caret down':'caret'} /> Kennis</div>
-              <div className="wm-cells">
+              <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.knowledgeIds.length>0)
-                  return <div key={`kenh-${w}`} className="wm-cell">{list.length>0 && <div className="wm-chip">{list.length}</div>}</div>
+                  return <div key={`kenh-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Kennis — week ${w}`)}>{list.length}</button>}</div>
                 })}
               </div>
               <div className="wm-vraak sticky-right">
@@ -331,13 +381,56 @@ export default function WeekMatrix({ plan }: Props){
             ))}
           </div>
         </div>
-        <div className="wm-divider-left" ref={dividerRef} />
       </div>
       <div className="wm-mask-left" />
       <div className="wm-hscroll sticky-bottom" ref={hScrollRef}>
         <div className="wm-hspacer" style={{ width: spacerW }} />
       </div>
     </div>
+    {preview && (
+      <div className="wm-preview-backdrop" onClick={()=> setPreview(null)}>
+        <div className="wm-preview" onClick={(e)=> e.stopPropagation()}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
+            <h3 style={{margin:'6px 0'}}>{preview!.title}</h3>
+            <button className="wm-smallbtn" onClick={()=> setPreview(null)}>Sluiten</button>
+          </div>
+          <div style={{display:'grid', gap:12}}>
+            {preview!.artifacts.map((a)=> (
+              <div key={a.id} style={{border:'1px solid var(--line-strong)', borderRadius:12, padding:12, background:'var(--surface2)'}}>
+                <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
+                  <KindIcon kind={a.kind} />
+                  <strong style={{flex:1}}>{a.name}</strong>
+                  <span className="muted">Week {a.week}</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:8}}>
+                  <span className="sep" />
+                  {(a.perspectives||[]).map(p=> (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
+                </div>
+                <div className="wm-vbars">
+                  <span>Variatie</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.variatie||0)/5*100}%`}} /></div>
+                  <span>Relevantie</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.relevantie||0)/5*100}%`}} /></div>
+                  <span>Authenticiteit</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.authenticiteit||0)/5*100}%`}} /></div>
+                  <span>Actualiteit</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.actualiteit||0)/5*100}%`}} /></div>
+                  <span>Kwantiteit</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.kwantiteit||0)/5*100}%`}} /></div>
+                </div>
+                <div style={{marginTop:10, display:'grid', gridTemplateColumns:'max-content 1fr', rowGap:6, columnGap:10}}>
+                  <span className="muted">Soort</span><span>{a.kind||'—'}</span>
+                  {a.evlOutcomeIds?.length ? (<><span className="muted">EVL</span><span>{a.evlOutcomeIds.map(id=> `${id} ${outcomeNameById.get(id)||''}`).join(', ')}</span></>) : null}
+                  {a.caseIds?.length ? (<><span className="muted">Casus</span><span>{a.caseIds.map(id=> caseNameById.get(id)||id).join(', ')}</span></>) : null}
+                  {a.knowledgeIds?.length ? (<><span className="muted">Kennis</span><span>{a.knowledgeIds.map(id=> knowlNameById.get(id)||id).join(', ')}</span></>) : null}
+                </div>
+                <div style={{marginTop:12, textAlign:'right'}}>
+                  {onEdit && (
+                    <button className="btn" onClick={()=>{ onEdit(a); setPreview(null) }}>Bewerken</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

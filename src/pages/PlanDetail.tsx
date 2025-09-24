@@ -233,7 +233,10 @@ export default function PlanDetail(){
         <main className="center">
           
           <h3 style={{marginTop:16}}>Matrix (LUK x weken)</h3>
-          <WeekMatrix plan={{...plan, name: localName, period: localPeriod}} />
+          <WeekMatrix
+            plan={{...plan, name: localName, period: localPeriod}}
+            onEdit={(a)=>{ startEditArtifact(a as any); }}
+          />
         </main>
       </section>
 
