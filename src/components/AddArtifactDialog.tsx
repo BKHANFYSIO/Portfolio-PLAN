@@ -20,6 +20,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const [caseIds, setCaseIds] = useState<string[]>([])
   const [knowledgeIds, setKnowledgeIds] = useState<string[]>([])
   const [vraak, setVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
+  const [kind, setKind] = useState<string>('')
 
   const evlExcluded = course?.evlOverrides?.EVL1 || []
   const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl])
@@ -68,8 +69,10 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   function save(){
     if(!name.trim()) return alert('Naam is verplicht')
     if(!week || Number(week) <= 0) return alert('Week is verplicht')
+    if(!kind) return alert('Kies het soort bewijs (verplicht)')
     const artifact: Artifact = {
       id: generateId('art'), name: name.trim(), week: Number(week), evlOutcomeIds, caseIds, knowledgeIds, vraak,
+      kind: kind as any,
       createdAt: Date.now(), updatedAt: Date.now()
     }
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
@@ -103,6 +106,18 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 })}
               </select>
             </label>
+            <label><span>Soort (verplicht)</span>
+              <select value={kind} onChange={e=>setKind(e.target.value)}>
+                <option value="">Kies soort…</option>
+                <option value="certificaat">Certificaat</option>
+                <option value="schriftelijk">Schriftelijk product</option>
+                <option value="kennistoets">Kennistoets</option>
+                <option value="vaardigheid">Vaardigheidstest</option>
+                <option value="performance">Performance</option>
+                <option value="gesprek">Gesprek</option>
+                <option value="overig">Overig</option>
+              </select>
+            </label>
             {templates.length>0 && (
               <label><span>Sjabloon</span>
                 <select onChange={e=>{
@@ -113,6 +128,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                   setCaseIds([...(t.cases||[])])
                   setKnowledgeIds([...(t.knowledge||[])])
                   setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+                  if(t.kind){ setKind(t.kind) }
                 }}>
                   <option value="">Kies sjabloon…</option>
                   {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
@@ -197,6 +213,18 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                   })}
                 </select>
               </label>
+              <label><span>Soort (verplicht)</span>
+                <select value={kind} onChange={e=>setKind(e.target.value)}>
+                  <option value="">Kies soort…</option>
+                  <option value="certificaat">Certificaat</option>
+                  <option value="schriftelijk">Schriftelijk product</option>
+                  <option value="kennistoets">Kennistoets</option>
+                  <option value="vaardigheid">Vaardigheidstest</option>
+                  <option value="performance">Performance</option>
+                  <option value="gesprek">Gesprek</option>
+                  <option value="overig">Overig</option>
+                </select>
+              </label>
               {templates.length>0 && (
                 <label><span>Sjabloon</span>
                   <select onChange={e=>{
@@ -207,6 +235,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                     setCaseIds([...(t.cases||[])])
                     setKnowledgeIds([...(t.knowledge||[])])
                     setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+                    if(t.kind){ setKind(t.kind) }
                   }}>
                     <option value="">Kies sjabloon…</option>
                     {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}

@@ -6,6 +6,7 @@ import './planDetail.css'
 import AddArtifactDialog from '../components/AddArtifactDialog'
 import WeekMatrix from '../components/WeekMatrix'
 import { getYears } from '../lib/curriculum'
+import { KindIcon } from '../components/icons'
 import { getCurriculum } from '../lib/curriculum'
 
 export default function PlanDetail(){
@@ -348,15 +349,15 @@ export default function PlanDetail(){
                       </ul>
                     </div>
                   )}
-                  <div style={{fontWeight:600, marginTop:4}}>Binnen geselecteerde weken</div>
+              <div style={{fontWeight:600, marginTop:4}}>Binnen geselecteerde weken</div>
                   <ul>
                     {yearWeeks.filter(w=> visibleSet.has(w.week)).map(w => (
                       <li key={w.week} style={{padding:'6px 0'}}>
                         <div className="muted" style={{fontSize:12}}>{w.code||w.label}</div>
                         <ul>
-                          {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
-                            <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
-                              <span>{a.name}</span>
+                      {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
+                        <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
+                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><KindIcon kind={a.kind} /> {a.name}</span>
                               <span>
                                 <button className="file-label" onClick={()=>startEditArtifact(a)}>Bewerken</button>
                                 <button className="danger" style={{marginLeft:6}} onClick={()=>deleteArtifact(a.id)}>Verwijderen</button>

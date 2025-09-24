@@ -55,6 +55,18 @@ export default function WeekMatrix({ plan }: Props){
     return (plan.artifacts||[]).filter(a => a.week===week && a.evlOutcomeIds.includes(lukId))
   }
 
+  function kindIcon(kind?: string){
+    // eenvoudige inline SVG-icoontjes
+    const stroke = 'currentColor'
+    if(kind==='certificaat') return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M6 2h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path stroke={stroke} fill="none" strokeWidth="2" d="M8 7h8M8 11h8M8 15h6"/></svg>
+    if(kind==='schriftelijk') return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M4 4h16v16H4z"/><path stroke={stroke} fill="none" strokeWidth="2" d="M7 8h10M7 12h10M7 16h7"/></svg>
+    if(kind==='kennistoets') return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M8 12h8M12 8v8"/></svg>
+    if(kind==='vaardigheid') return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M8 21v-6l8-8 3 3-8 8H8z"/><circle cx="7" cy="7" r="2" stroke={stroke} fill="none" strokeWidth="2"/></svg>
+    if(kind==='performance') return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M3 20h18M6 20V8l6-3 6 3v12"/></svg>
+    if(kind==='gesprek') return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M3 6h14v9H7l-4 4V6z"/><path stroke={stroke} fill="none" strokeWidth="2" d="M17 10h4v8l-3-3h-1z"/></svg>
+    return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/></svg>
+  }
+
   function averageVraak(scores: {variatie:number;relevantie:number;authenticiteit:number;actualiteit:number;kwantiteit:number}[]){
     if(scores.length===0) return '—'
     const sum = scores.reduce((a,s)=>({
@@ -195,11 +207,13 @@ export default function WeekMatrix({ plan }: Props){
                   <div className="wm-rowhead">{o.id} <span className="muted">{o.name}</span></div>
                   <div className="wm-cells">
                     {weeks.map(w => {
-                      const list = artifactsIn(o.id, w)
+                    const list = artifactsIn(o.id, w)
                       return (
                         <div key={w} className="wm-cell">
                           {list.length>0 ? (
-                            <div className="wm-chip">{list.length}</div>
+                            <div className="wm-chip" title={list.map(a=>a.name).join(', ')}>
+                              {list.length}
+                            </div>
                           ) : null}
                         </div>
                       )
