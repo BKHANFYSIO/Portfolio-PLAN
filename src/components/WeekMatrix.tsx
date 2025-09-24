@@ -165,7 +165,7 @@ export default function WeekMatrix({ plan }: Props){
               })()}
             </div>
           </div>
-          <div className="wm-cols" style={{ marginLeft: 0 }}>
+          <div className="wm-cols">
             {weeks.map(w=> {
               const y = years.find(y=>y.year===plan.year)
               const info = y?.weeks.find(ww=> ww.week===w)
@@ -215,8 +215,11 @@ export default function WeekMatrix({ plan }: Props){
                           <div className="wm-artlist">
                             {list.map((a:any)=> (
                               <button key={a.id} className="wm-art" title={a.name} onClick={()=> alert(`VRAAK – variatie:${a.vraak?.variatie||'-'} relev:${a.vraak?.relevantie||'-'} auth:${a.vraak?.authenticiteit||'-'} act:${a.vraak?.actualiteit||'-'} kwan:${a.vraak?.kwantiteit||'-'}`)}>
-                                <KindIcon kind={a.kind} />
-                                {Array.isArray(a.perspectives) && a.perspectives.slice(0,2).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                                <div className="icons-row">
+                                  <KindIcon kind={a.kind} />
+                                  <span className="sep" />
+                                  {Array.isArray(a.perspectives) && a.perspectives.slice(0,3).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                                </div>
                                 <span className="name">{a.name}</span>
                               </button>
                             ))}

@@ -6,7 +6,7 @@
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(79,124,255,.28) }
-.wm-cols{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; border-bottom:1px solid var(--line) }
+.wm-cols{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; border-bottom:1px solid var(--line); padding-left:8px }
 .wm-col{ padding:10px 8px; text-align:center; border-right:1px solid var(--line-strong); color:var(--text) }
 .wm-col.holiday{ background:rgba(255, 200, 0, .16); font-weight:600 }
 .wm-body{ width:100%; display:block }
@@ -16,7 +16,7 @@
 .wm-rowhead.evl{ font-weight:600; background:rgba(14,19,32,.08) }
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
-.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch }
+.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch; padding-left:8px }
 .wm-cell{ min-height:46px; height:auto; padding:0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
 .wm-row .wm-cells .wm-cell{ justify-content:flex-start; padding:4px 6px }
 .wm-row .wm-cells .wm-cell:first-child{ padding-left:10px }
@@ -30,7 +30,10 @@
 
 /* Artifact regels in subrijen */
 .wm-artlist{ width:100%; padding:6px 6px; display:flex; flex-direction:column; gap:4px }
-.wm-art{ display:flex; align-items:center; gap:6px; width:100%; text-align:left; background:transparent; border:none; color:var(--text); padding:2px 4px; border-radius:6px; cursor:pointer }
+.wm-art{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; text-align:left; background:transparent; border:none; color:var(--text); padding:4px 4px; border-radius:6px; cursor:pointer }
+.wm-art .icons-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap }
+.wm-art .icon{ flex:0 0 auto }
+.wm-art .sep{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.25); display:inline-block }
 .wm-art:hover{ background:rgba(255,255,255,.06) }
 .wm-art .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px }
 
