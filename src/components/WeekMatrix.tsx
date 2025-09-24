@@ -215,12 +215,15 @@ export default function WeekMatrix({ plan }: Props){
                           <div className="wm-artlist">
                             {list.map((a:any)=> (
                               <button key={a.id} className="wm-art" title={a.name} onClick={()=> alert(`VRAAK – variatie:${a.vraak?.variatie||'-'} relev:${a.vraak?.relevantie||'-'} auth:${a.vraak?.authenticiteit||'-'} act:${a.vraak?.actualiteit||'-'} kwan:${a.vraak?.kwantiteit||'-'}`)}>
-                                <div className="icons-row">
+                                <div className="icons-row" title={`${a.name}\nSoort: ${a.kind||'-'}\nPerspectieven: ${Array.isArray(a.perspectives)?a.perspectives.join(', '):'-'}`}>
                                   <KindIcon kind={a.kind} />
                                   <span className="sep" />
                                   {Array.isArray(a.perspectives) && a.perspectives.slice(0,3).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                                  {Array.isArray(a.perspectives) && a.perspectives.length>3 && (
+                                    <span className="more">+{a.perspectives.length-3}</span>
+                                  )}
                                 </div>
-                                <span className="name">{a.name}</span>
+                                <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
                             ))}
                           </div>

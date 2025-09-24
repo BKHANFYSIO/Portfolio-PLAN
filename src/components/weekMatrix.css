@@ -31,9 +31,10 @@
 /* Artifact regels in subrijen */
 .wm-artlist{ width:100%; padding:6px 6px; display:flex; flex-direction:column; gap:4px }
 .wm-art{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; text-align:left; background:transparent; border:none; color:var(--text); padding:4px 4px; border-radius:6px; cursor:pointer }
-.wm-art .icons-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap }
+.wm-art .icons-row{ display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow:hidden; white-space:nowrap }
 .wm-art .icon{ flex:0 0 auto }
-.wm-art .sep{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.25); display:inline-block }
+.wm-art .sep{ width:1px; height:12px; background:var(--line-strong); display:inline-block }
+.wm-art .more{ margin-left:4px; color:var(--muted) }
 .wm-art:hover{ background:rgba(255,255,255,.06) }
 .wm-art .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px }
 
