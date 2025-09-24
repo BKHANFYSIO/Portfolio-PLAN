@@ -21,10 +21,13 @@ export type Artifact = {
   caseIds: string[];
   knowledgeIds: string[];
   vraak: VraakScore;
+  perspectives?: PerspectiveKey[];
   createdAt: number;
   updatedAt: number;
   kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
 }
+
+export type PerspectiveKey = 'zelfreflectie'|'peer'|'ouderejaars'|'docent'|'extern'
 
 export type PortfolioPlan = {
   id: string;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { generateId, LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { Artifact, PortfolioPlan } from '../lib/storage'
+import type { PerspectiveKey } from '../lib/storage'
 import { getCurriculum, getYears } from '../lib/curriculum'
 
 type Props = { plan: PortfolioPlan; onClose: ()=>void; onSaved: (a:Artifact)=>void }
@@ -21,6 +22,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const [knowledgeIds, setKnowledgeIds] = useState<string[]>([])
   const [vraak, setVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
   const [kind, setKind] = useState<string>('')
+  const [persp, setPersp] = useState<PerspectiveKey[]>([])
 
   const evlExcluded = course?.evlOverrides?.EVL1 || []
   const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl])
@@ -73,6 +75,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
     const artifact: Artifact = {
       id: generateId('art'), name: name.trim(), week: Number(week), evlOutcomeIds, caseIds, knowledgeIds, vraak,
       kind: kind as any,
+      perspectives: persp,
       createdAt: Date.now(), updatedAt: Date.now()
     }
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
@@ -135,6 +138,16 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 </select>
               </label>
             )}
+            <label style={{gridColumn:'1 / -1'}}>
+              <span>Perspectieven (meerdere mogelijk)</span>
+              <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+                {(['zelfreflectie','peer','ouderejaars','docent','extern'] as PerspectiveKey[]).map(p => (
+                  <label key={p} style={{display:'inline-flex',gap:6,alignItems:'center'}}>
+                    <input type="checkbox" checked={persp.includes(p)} onChange={()=> setPersp(s=> s.includes(p) ? s.filter(x=>x!==p) : [...s,p]) } /> {p}
+                  </label>
+                ))}
+              </div>
+            </label>
           </div>
         )}
 
@@ -242,6 +255,16 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                   </select>
                 </label>
               )}
+              <label style={{gridColumn:'1 / -1'}}>
+                <span>Perspectieven (meerdere mogelijk)</span>
+                <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+                  {(['zelfreflectie','peer','ouderejaars','docent','extern'] as PerspectiveKey[]).map(p => (
+                    <label key={p} style={{display:'inline-flex',gap:6,alignItems:'center'}}>
+                      <input type="checkbox" checked={persp.includes(p)} onChange={()=> setPersp(s=> s.includes(p) ? s.filter(x=>x!==p) : [...s,p]) } /> {p}
+                    </label>
+                  ))}
+                </div>
+              </label>
             </div>
             <fieldset>
               <legend>EVL leeruitkomsten</legend>

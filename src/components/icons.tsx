@@ -1,6 +1,7 @@
 import React from 'react'
 
 export type KindKey = 'certificaat'|'schriftelijk'|'kennistoets'|'vaardigheid'|'performance'|'gesprek'|'document'|'toets'|'overig'|string|undefined
+export type PerspectiveKey = 'zelfreflectie'|'peer'|'ouderejaars'|'docent'|'extern'
 
 export function KindIcon({ kind, className }: { kind: KindKey; className?: string }){
   const stroke = 'currentColor'
@@ -21,6 +22,25 @@ export function KindIcon({ kind, className }: { kind: KindKey; className?: strin
       return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M3 6h14v9H7l-4 4V6z"/><path stroke={stroke} fill="none" strokeWidth="2" d="M17 10h4v8l-3-3h-1z"/></svg>
     case 'document':
       return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M6 2h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/></svg>
+    default:
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/></svg>
+  }
+}
+
+export function PerspectiveIcon({ p, className }: { p: PerspectiveKey; className?: string }){
+  const stroke = 'currentColor'
+  const cls = className || 'icon'
+  switch(p){
+    case 'zelfreflectie':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z"/></svg>
+    case 'peer':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><circle cx="16" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M4 18v-1c0-2.2 2.7-4 6-4m4 0c3.3 0 6 1.8 6 4v1"/></svg>
+    case 'ouderejaars':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M3 7l9-4 9 4-9 4-9-4zM3 12l9 4 9-4"/></svg>
+    case 'docent':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M4 5h12v10H4z"/><path stroke={stroke} fill="none" strokeWidth="2" d="M6 7h8M6 10h8M20 6v12l-4-3-4 3V6"/></svg>
+    case 'extern':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M12 3v6l4 2"/></svg>
     default:
       return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/></svg>
   }

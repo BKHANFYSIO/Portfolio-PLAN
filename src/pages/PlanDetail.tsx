@@ -357,7 +357,11 @@ export default function PlanDetail(){
                         <ul>
                       {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
                         <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
-                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><KindIcon kind={a.kind} /> {a.name}</span>
+                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><KindIcon kind={a.kind} /> {a.name}
+                            {Array.isArray(a.perspectives) && a.perspectives.length>0 && (
+                              <span className="muted" style={{fontSize:12, marginLeft:8}}>· {a.perspectives.join(', ')}</span>
+                            )}
+                          </span>
                               <span>
                                 <button className="file-label" onClick={()=>startEditArtifact(a)}>Bewerken</button>
                                 <button className="danger" style={{marginLeft:6}} onClick={()=>deleteArtifact(a.id)}>Verwijderen</button>
@@ -392,6 +396,31 @@ export default function PlanDetail(){
                 </select>
               </label>
             </div>
+            {/* Perspectieven bewerken */}
+            <fieldset>
+              <legend>Perspectieven</legend>
+              <div>
+                {(['zelfreflectie','peer','ouderejaars','docent','extern'] as const).map(p => (
+                  <label key={p} style={{display:'inline-flex',gap:6,marginRight:12}}>
+                    <input type="checkbox" checked={(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives?.includes(p) || false}
+                      onChange={()=>{
+                        const current = (plan.artifacts||[]).find(a=>a.id===editArtifactId)
+                        if(!current) return
+                        const next = current.perspectives?.includes(p) ? (current.perspectives||[]).filter(x=>x!==p) : ([...(current.perspectives||[]), p])
+                        setEditArtifactId(editArtifactId) // force rerender
+                        const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
+                        const idx = plans.findIndex(pn=>pn.id===plan.id)
+                        if(idx>=0){
+                          plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map(a=> a.id===editArtifactId ? ({ ...a, perspectives: next }) : a), updatedAt: Date.now() }
+                          writeJson(LS_KEYS.plans, plans)
+                          const aIdx = (plan.artifacts||[]).findIndex((a:any)=>a.id===editArtifactId)
+                          if(aIdx>=0){ (plan.artifacts as any[])[aIdx] = { ...(plan.artifacts as any[])[aIdx], perspectives: next } }
+                        }
+                      }} /> {p}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <fieldset>
               <legend>Leeruitkomsten (EVL)</legend>
               {evlForCourse.map(b=> (
