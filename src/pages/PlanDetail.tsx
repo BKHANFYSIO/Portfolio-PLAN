@@ -7,6 +7,7 @@ import AddArtifactDialog from '../components/AddArtifactDialog'
 import WeekMatrix from '../components/WeekMatrix'
 import { getYears } from '../lib/curriculum'
 import { KindIcon, PerspectiveIcon } from '../components/icons'
+import type { PerspectiveKey } from '../lib/storage'
 import { getCurriculum } from '../lib/curriculum'
 
 export default function PlanDetail(){
@@ -22,6 +23,7 @@ export default function PlanDetail(){
   const [editArtifactId, setEditArtifactId] = useState<string|null>(null)
   const [editArtifactName, setEditArtifactName] = useState('')
   const [editArtifactWeek, setEditArtifactWeek] = useState<number>(1 as any)
+  const [editArtifactKind, setEditArtifactKind] = useState<string>('')
   const { evl, courses } = getCurriculum()
   const course = useMemo(()=> courses.find(c=>c.id===plan.courseId), [courses, plan.courseId])
   const evlExcluded = course?.evlOverrides?.EVL1 || []
@@ -30,6 +32,7 @@ export default function PlanDetail(){
   const [editArtifactCases, setEditArtifactCases] = useState<string[]>([])
   const [editArtifactKnowl, setEditArtifactKnowl] = useState<string[]>([])
   const [editArtifactVraak, setEditArtifactVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
+  const [editArtifactPersp, setEditArtifactPersp] = useState<PerspectiveKey[]>([])
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({
     name: plan?.name || '',
@@ -90,10 +93,12 @@ export default function PlanDetail(){
     setEditArtifactId(a.id)
     setEditArtifactName(a.name)
     setEditArtifactWeek(a.week)
+    setEditArtifactKind(a.kind||'')
     setEditArtifactEvl([...(a.evlOutcomeIds||[])])
     setEditArtifactCases([...(a.caseIds||[])])
     setEditArtifactKnowl([...(a.knowledgeIds||[])])
     setEditArtifactVraak({ ...(a.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+    setEditArtifactPersp([...(a.perspectives||[])])
   }
 
   function saveArtifactEdits(){
@@ -101,11 +106,11 @@ export default function PlanDetail(){
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
     const idx = plans.findIndex(p=>p.id===plan.id)
     if(idx>=0){
-      plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map((a:any)=> a.id===editArtifactId ? ({ ...a, name: editArtifactName.trim()||a.name, week: Number(editArtifactWeek), evlOutcomeIds: editArtifactEvl, caseIds: editArtifactCases, knowledgeIds: editArtifactKnowl, vraak: editArtifactVraak, updatedAt: Date.now() }) : a), updatedAt: Date.now() }
+      plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map((a:any)=> a.id===editArtifactId ? ({ ...a, name: editArtifactName.trim()||a.name, week: Number(editArtifactWeek), kind: editArtifactKind||undefined, perspectives: editArtifactPersp, evlOutcomeIds: editArtifactEvl, caseIds: editArtifactCases, knowledgeIds: editArtifactKnowl, vraak: editArtifactVraak, updatedAt: Date.now() }) : a), updatedAt: Date.now() }
       writeJson(LS_KEYS.plans, plans)
       // update lokaal object zodat lijst ververst
       const aIdx = (plan.artifacts||[]).findIndex((a:any)=>a.id===editArtifactId)
-      if(aIdx>=0){ (plan.artifacts as any[])[aIdx] = { ...(plan.artifacts as any[])[aIdx], name: editArtifactName.trim()||editArtifactName, week: Number(editArtifactWeek) } }
+      if(aIdx>=0){ (plan.artifacts as any[])[aIdx] = { ...(plan.artifacts as any[])[aIdx], name: editArtifactName.trim()||editArtifactName, week: Number(editArtifactWeek), kind: editArtifactKind||undefined, perspectives: editArtifactPersp } }
     }
     setEditArtifactId(null)
   }
@@ -403,6 +408,18 @@ export default function PlanDetail(){
               <label><span>Week</span>
                 <select value={editArtifactWeek} onChange={e=>setEditArtifactWeek(Number(e.target.value))}>
                   {yearWeeks.map(w => (<option key={w.week} value={w.week}>{w.code||w.label}</option>))}
+                </select>
+              </label>
+              <label><span>Soort</span>
+                <select value={editArtifactKind} onChange={e=>setEditArtifactKind(e.target.value)}>
+                  <option value="">—</option>
+                  <option value="certificaat">Certificaat</option>
+                  <option value="schriftelijk">Schriftelijk product</option>
+                  <option value="kennistoets">Kennistoets</option>
+                  <option value="vaardigheid">Vaardigheidstest</option>
+                  <option value="performance">Performance</option>
+                  <option value="gesprek">Gesprek</option>
+                  <option value="overig">Overig</option>
                 </select>
               </label>
             </div>

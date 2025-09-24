@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PortfolioPlan } from '../lib/storage'
 import { getCurriculum, getYears } from '../lib/curriculum'
 import './weekMatrix.css'
+import { KindIcon, PerspectiveIcon } from './icons'
 
 type Props = { plan: PortfolioPlan }
 
@@ -215,6 +216,17 @@ export default function WeekMatrix({ plan }: Props){
                               {list.length}
                             </div>
                           ) : null}
+                          {list.length>0 && (
+                            <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap'}}>
+                              {list.slice(0,3).map((a:any) => (
+                                <span key={a.id} title={a.name} style={{display:'inline-flex',alignItems:'center',gap:2}}>
+                                  <KindIcon kind={a.kind} />
+                                  {Array.isArray(a.perspectives) && a.perspectives.slice(0,2).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                                </span>
+                              ))}
+                              {list.length>3 && <span className="muted" style={{fontSize:10}}>+{list.length-3}</span>}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
