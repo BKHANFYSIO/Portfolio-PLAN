@@ -427,14 +427,33 @@ export default function PlanDetail(){
             <fieldset>
               <legend>Perspectieven</legend>
               <div>
+                <label style={{display:'inline-flex',gap:6,marginRight:12}}>
+                  <input type="checkbox" checked={(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives?.length===0 || !(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives}
+                    onChange={()=>{
+                      const current = (plan.artifacts||[]).find(a=>a.id===editArtifactId)
+                      if(!current) return
+                      const next: any[] = []
+                      setEditArtifactPersp(next as any)
+                      const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
+                      const idx = plans.findIndex(pn=>pn.id===plan.id)
+                      if(idx>=0){
+                        plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map(a=> a.id===editArtifactId ? ({ ...a, perspectives: next }) : a), updatedAt: Date.now() }
+                        writeJson(LS_KEYS.plans, plans)
+                        const aIdx = (plan.artifacts||[]).findIndex((a:any)=>a.id===editArtifactId)
+                        if(aIdx>=0){ (plan.artifacts as any[])[aIdx] = { ...(plan.artifacts as any[])[aIdx], perspectives: next } }
+                      }
+                    }} /> geen perspectieven
+                </label>
                 {(['zelfreflectie','peer','ouderejaars','docent','extern'] as const).map(p => (
                   <label key={p} style={{display:'inline-flex',gap:6,marginRight:12}}>
                     <input type="checkbox" checked={(plan.artifacts||[]).find(a=>a.id===editArtifactId)?.perspectives?.includes(p) || false}
                       onChange={()=>{
                         const current = (plan.artifacts||[]).find(a=>a.id===editArtifactId)
                         if(!current) return
-                        const next = current.perspectives?.includes(p) ? (current.perspectives||[]).filter(x=>x!==p) : ([...(current.perspectives||[]), p])
+                        let next = current.perspectives?.includes(p) ? (current.perspectives||[]).filter(x=>x!==p) : ([...(current.perspectives||[]), p])
+                        if(next.length>0){ next = next.filter(Boolean) }
                         setEditArtifactId(editArtifactId) // force rerender
+                        setEditArtifactPersp(next as any)
                         const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
                         const idx = plans.findIndex(pn=>pn.id===plan.id)
                         if(idx>=0){

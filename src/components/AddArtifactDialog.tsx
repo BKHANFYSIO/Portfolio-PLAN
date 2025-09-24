@@ -141,6 +141,9 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
             <label style={{gridColumn:'1 / -1'}}>
               <span>Perspectieven (meerdere mogelijk)</span>
               <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+                <label style={{display:'inline-flex',gap:6,alignItems:'center'}}>
+                  <input type="checkbox" checked={persp.length===0} onChange={()=> setPersp([])} /> geen perspectieven
+                </label>
                 {(['zelfreflectie','peer','ouderejaars','docent','extern'] as PerspectiveKey[]).map(p => (
                   <label key={p} style={{display:'inline-flex',gap:6,alignItems:'center'}}>
                     <input type="checkbox" checked={persp.includes(p)} onChange={()=> setPersp(s=> s.includes(p) ? s.filter(x=>x!==p) : [...s,p]) } /> {p}
@@ -258,6 +261,9 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
               <label style={{gridColumn:'1 / -1'}}>
                 <span>Perspectieven (meerdere mogelijk)</span>
                 <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+                  <label style={{display:'inline-flex',gap:6,alignItems:'center'}}>
+                    <input type="checkbox" checked={persp.length===0} onChange={()=> setPersp([])} /> geen perspectieven
+                  </label>
                   {(['zelfreflectie','peer','ouderejaars','docent','extern'] as PerspectiveKey[]).map(p => (
                     <label key={p} style={{display:'inline-flex',gap:6,alignItems:'center'}}>
                       <input type="checkbox" checked={persp.includes(p)} onChange={()=> setPersp(s=> s.includes(p) ? s.filter(x=>x!==p) : [...s,p]) } /> {p}
