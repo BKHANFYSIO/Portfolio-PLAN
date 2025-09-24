@@ -165,8 +165,7 @@ export default function WeekMatrix({ plan }: Props){
               })()}
             </div>
           </div>
-          <div className="wm-sep" />
-          <div className="wm-cols">
+          <div className="wm-cols" style={{ marginLeft: 0 }}>
             {weeks.map(w=> {
               const y = years.find(y=>y.year===plan.year)
               const info = y?.weeks.find(ww=> ww.week===w)
@@ -186,7 +185,6 @@ export default function WeekMatrix({ plan }: Props){
                 <div className="wm-rowhead evl">
                   <span className={open[block.id] ? 'caret down' : 'caret'} /> {block.id} · {block.name}
                 </div>
-                <div className="wm-sep" />
                 <div className="wm-cells">
                   {weeks.map(w => {
                     const outcomeIds = block.outcomes.map(o=>o.id)
@@ -207,8 +205,7 @@ export default function WeekMatrix({ plan }: Props){
 
               {open[block.id] && block.outcomes.map(o => (
                 <div key={o.id} className="wm-row">
-                <div className="wm-rowhead">{o.id} <span className="muted">{o.name}</span></div>
-                <div className="wm-sep" />
+                  <div className="wm-rowhead">{o.id} <span className="muted">{o.name}</span></div>
                   <div className="wm-cells">
                   {weeks.map(w => {
                     const list = artifactsIn(o.id, w)

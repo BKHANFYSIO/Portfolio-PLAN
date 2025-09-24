@@ -1,8 +1,8 @@
 .wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
 .wm-wrap.dragging{ cursor:grabbing }
 .wm-table{ display:block; min-width:100%; width:max-content; }
-.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) 1px max-content var(--rightWidth); background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow) }
-.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); z-index:4 }
+.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow); align-items:stretch }
+.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:1px solid var(--line-strong); z-index:4 }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(79,124,255,.28) }
@@ -10,16 +10,17 @@
 .wm-col{ padding:10px 8px; text-align:center; border-right:1px solid var(--line-strong); color:var(--text) }
 .wm-col.holiday{ background:rgba(255, 200, 0, .16); font-weight:600 }
 .wm-body{ width:100%; display:block }
-.wm-row{ display:grid; grid-template-columns: var(--leftWidth) 1px max-content var(--rightWidth) }
-.wm-evlhead{ display:grid; grid-template-columns: var(--leftWidth) 1px max-content var(--rightWidth); align-items:stretch }
-.wm-rowhead{ position:sticky; left:0; background:var(--surface); width:var(--leftWidth); min-width:var(--leftWidth); padding:10px; border-top:1px solid var(--line); z-index:2 }
+.wm-row{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) }
+.wm-evlhead{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); align-items:stretch }
+.wm-rowhead{ position:sticky; left:0; background:var(--surface); width:var(--leftWidth); min-width:var(--leftWidth); padding:10px; border-top:1px solid var(--line); border-right:1px solid var(--line-strong); z-index:2 }
 .wm-rowhead.evl{ font-weight:600; background:rgba(14,19,32,.08) }
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
 .wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch; padding-left:0 }
 .wm-cell{ min-height:46px; height:auto; padding:0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--text) }
-.wm-row .wm-cells .wm-cell{ justify-content:flex-start; padding:6px 8px }
-.wm-evlhead .wm-cell{ justify-content:center; padding:6px 8px }
+.wm-row .wm-cells .wm-cell{ justify-content:flex-start; padding:4px 6px }
+.wm-row .wm-cells .wm-cell:first-child{ padding-left:8px }
+.wm-evlhead .wm-cell{ justify-content:center; padding:0 }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
 .wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
 .wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
@@ -46,7 +47,6 @@
 
 /* masker om de sticky linkerkolom vrij te houden van de horizontale scrollbar */
 .wm-mask-left{ position:sticky; left:0; bottom:0; width:var(--leftWidth); height:12px; background:var(--surface); z-index:5 }
-.wm-sep{ background:var(--line-strong) }
 
 /* Altijd-zichtbare horizontale scroll-balk gesynchroniseerd met inhoud */
 .wm-hscroll{ position:sticky; bottom:0; left:0; right:0; height:14px; overflow-x:auto; overflow-y:hidden; background:transparent; z-index:6 }
