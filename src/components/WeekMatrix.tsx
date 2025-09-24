@@ -189,7 +189,7 @@ export default function WeekMatrix({ plan }: Props){
                   {weeks.map(w => {
                     const outcomeIds = block.outcomes.map(o=>o.id)
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.evlOutcomeIds.some(id=> outcomeIds.includes(id)))
-                    return <div key={`evlh-${block.id}-${w}`} className="wm-cell">{list.length>0 && <div className="wm-chip">{list.length}</div>}</div>
+                    return <div key={`evlh-${block.id}-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> alert(`${list.map(a=>a.name).join(', ')}`)}>{list.length}</button>}</div>
                   })}
                 </div>
                 <div className="wm-vraak sticky-right">
@@ -207,29 +207,24 @@ export default function WeekMatrix({ plan }: Props){
                 <div key={o.id} className="wm-row">
                   <div className="wm-rowhead">{o.id} <span className="muted">{o.name}</span></div>
                   <div className="wm-cells">
-                    {weeks.map(w => {
+                  {weeks.map(w => {
                     const list = artifactsIn(o.id, w)
-                      return (
-                        <div key={w} className="wm-cell">
-                          {list.length>0 ? (
-                            <div className="wm-chip" title={list.map(a=>a.name).join(', ')}>
-                              {list.length}
-                            </div>
-                          ) : null}
-                          {list.length>0 && (
-                            <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap'}}>
-                              {list.slice(0,3).map((a:any) => (
-                                <span key={a.id} title={a.name} style={{display:'inline-flex',alignItems:'center',gap:2}}>
-                                  <KindIcon kind={a.kind} />
-                                  {Array.isArray(a.perspectives) && a.perspectives.slice(0,2).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
-                                </span>
-                              ))}
-                              {list.length>3 && <span className="muted" style={{fontSize:10}}>+{list.length-3}</span>}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                    return (
+                      <div key={w} className="wm-cell">
+                        {list.length>0 ? (
+                          <div className="wm-artlist">
+                            {list.map((a:any)=> (
+                              <button key={a.id} className="wm-art" title={a.name} onClick={()=> alert(`VRAAK – variatie:${a.vraak?.variatie||'-'} relev:${a.vraak?.relevantie||'-'} auth:${a.vraak?.authenticiteit||'-'} act:${a.vraak?.actualiteit||'-'} kwan:${a.vraak?.kwantiteit||'-'}`)}>
+                                <KindIcon kind={a.kind} />
+                                {Array.isArray(a.perspectives) && a.perspectives.slice(0,2).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                                <span className="name">{a.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
                   </div>
                   <div className="wm-vraak sticky-right">
                     {

@@ -25,6 +25,19 @@
 .wm-vcol.sticky-right{ z-index:8 } /* header VRAAK cel boven body-cellen */
 .wm-chip{ background:var(--tint-weak); border:1px solid rgba(79,124,255,.45); color:var(--text); padding:2px 6px; border-radius:999px; font-size:12px }
 
+/* Artifact regels in subrijen */
+.wm-artlist{ width:100%; padding:6px 6px; display:flex; flex-direction:column; gap:4px }
+.wm-art{ display:flex; align-items:center; gap:6px; width:100%; text-align:left; background:transparent; border:none; color:var(--text); padding:2px 4px; border-radius:6px; cursor:pointer }
+.wm-art:hover{ background:rgba(255,255,255,.06) }
+.wm-art .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px }
+
+/* Preview popup */
+.wm-preview-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000 }
+.wm-preview{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; width:min(640px,92vw); max-height:80vh; overflow:auto; padding:12px }
+.wm-vbars{ display:grid; grid-template-columns:100px 1fr; gap:6px; align-items:center }
+.wm-vbar{ height:8px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden }
+.wm-vbar .fill{ height:100%; background:var(--primary) }
+
 /* masker om de sticky linkerkolom vrij te houden van de horizontale scrollbar */
 .wm-mask-left{ position:sticky; left:0; bottom:0; width:var(--leftWidth); height:12px; background:var(--surface); z-index:5 }
 
