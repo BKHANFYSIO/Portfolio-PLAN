@@ -1,29 +1,29 @@
 .wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
 .wm-wrap.dragging{ cursor:grabbing }
-.wm-table{ display:block; min-width:100%; width:max-content; position:relative }
-.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow) }
-.wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:none; z-index:4; overflow:hidden }
+.wm-table{ display:grid; grid-template-columns: var(--leftWidth) repeat(var(--weeks), var(--colWidth)) var(--rightWidth); min-width:100%; width:max-content; position:relative }
+.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: subgrid; grid-column: 1 / -1; background:var(--surface); z-index:10; left:0; width:100%; box-shadow: var(--sticky-shadow) }
+.wm-corner{ position:sticky; left:0; grid-column:1; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:none; z-index:4; overflow:hidden }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(79,124,255,.28) }
-.wm-cols{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; border-bottom:1px solid var(--line); padding-left:0 }
+.wm-cols{ grid-column:2 / -2; display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; border-bottom:1px solid var(--line); padding-left:0; border-left:1px solid var(--line-strong) }
 .wm-col{ padding:10px 8px; text-align:center; border-right:1px solid var(--line-strong); color:var(--text) }
 .wm-col.holiday{ background:rgba(255, 200, 0, .16); font-weight:600 }
 .wm-body{ width:100%; display:block }
-.wm-row{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) }
-.wm-evlhead{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth); align-items:stretch }
-.wm-rowhead{ position:sticky; left:0; background:var(--surface); width:var(--leftWidth); min-width:var(--leftWidth); padding:10px; border-top:1px solid var(--line); border-right:none; z-index:2 }
+.wm-row{ display:grid; grid-template-columns: subgrid; grid-column: 1 / -1 }
+.wm-evlhead{ display:grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items:stretch }
+.wm-rowhead{ position:sticky; left:0; grid-column:1; background:var(--surface); width:var(--leftWidth); min-width:var(--leftWidth); padding:10px; border-top:1px solid var(--line); border-right:none; z-index:2 }
 .wm-rowhead.evl{ font-weight:600; background:rgba(14,19,32,.08) }
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
 .caret.down{ transform:rotate(0deg) }
-.wm-cells{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch; padding-left:0 }
+.wm-cells{ grid-column:2 / -2; display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; align-self:stretch; padding-left:0; border-left:1px solid var(--line-strong) }
 .wm-cell{ min-height:46px; height:auto; padding:0; border-top:1px solid var(--line); border-right:1px solid var(--line); display:flex; align-items:flex-start; justify-content:flex-start; color:var(--text) }
 .wm-row .wm-cells .wm-cell{ justify-content:flex-start; align-items:flex-start; padding:4px 6px }
 .wm-row .wm-cells .wm-cell:first-child{ padding-left:10px }
 .wm-evlhead .wm-cell{ justify-content:center; padding:0 }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
-.wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
-.wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
+.wm-vcol{ grid-column:-1; width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
+.wm-vraak{ grid-column:-1; width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
 .sticky-right{ position:sticky; right:0; background:var(--surface); z-index:10; box-shadow: -4px 0 8px rgba(14,19,32,.06) }
 .wm-vcol.sticky-right{ z-index:8 } /* header VRAAK cel boven body-cellen */
 .wm-chip{ background:var(--tint-weak); border:1px solid rgba(79,124,255,.45); color:var(--text); padding:2px 6px; border-radius:999px; font-size:12px }
@@ -59,5 +59,5 @@
 .wm-evlhead .wm-vraak{ background:var(--surface2) }
 
 /* Eén gedeelde scheidingslijn tussen linkerkolom en weken */
-.wm-divider-left{ position:absolute; top:0; bottom:0; left:var(--dividerLeftPx, var(--leftWidth)); width:1px; background:var(--line-strong); z-index:11; pointer-events:none }
+.wm-divider-left{ display:none }
 
