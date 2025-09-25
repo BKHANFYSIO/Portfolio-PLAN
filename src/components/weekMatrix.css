@@ -87,4 +87,6 @@
 .wm-evlhead .wm-cell{ background:var(--surface2) }
 .wm-evlhead .wm-vraak{ background:var(--surface2) }
 .wm-evlhead .wm-self{ background:var(--surface2) }
+/* Ook subrij-cellen dezelfde lichte tint (met uitzondering van VRAAK/Beheersing kolommen) */
+.wm-row .wm-cells .wm-cell{ background:var(--surface2) }
 
