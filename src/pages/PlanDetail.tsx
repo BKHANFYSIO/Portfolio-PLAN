@@ -205,7 +205,7 @@ export default function PlanDetail(){
     setShowEdit(false)
   }
 
-  async function exportViewport(){
+  async function exportPdf(){
     const container = document.querySelector('.center') as HTMLElement | null
     if(!container) return
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
@@ -254,70 +254,72 @@ export default function PlanDetail(){
   useEffect(()=>{
     const p = new URLSearchParams(loc.search)
     if(p.get('export')==='pdf'){
-      setTimeout(()=>{ exportFitAll() }, 400)
+      // Open eerst de instructie-popup in plaats van direct te exporteren
+      setShowPdfGuide(true)
     }
   }, [loc.search])
 
-  // Altijd passend (alle weken) met verticale paginering op hoofdrijen
-  async function exportFitAll(){
-    const table = document.querySelector('.center .wm-table') as HTMLElement | null
-    if(!table) return
-    // Maak een off-screen print root zodat overflow/sticky niets afknijpt
-    const printRoot = document.createElement('div')
-    printRoot.className = 'print-root'
-    Object.assign(printRoot.style, { position:'fixed', left:'-99999px', top:'0', background:getComputedStyle(document.documentElement).getPropertyValue('--surface')||'#fff', padding:'0', margin:'0', zIndex:'-1' } as any)
-    const style = document.createElement('style')
-    style.textContent = `.print-root .sticky-right{ position:static !important; box-shadow:none !important }
-    .print-root .wm-header{ position:static !important; box-shadow:none !important }
-    .print-root .wm-rowhead{ position:sticky; left:0 }
-    .print-root .wm-hscroll{ display:none !important }`
-    printRoot.appendChild(style)
-    const clone = table.cloneNode(true) as HTMLElement
-    printRoot.appendChild(clone)
-    document.body.appendChild(printRoot)
-
+  // Instructies en varianten voor PDF-export
+  const [showPdfGuide, setShowPdfGuide] = useState(false)
+  async function exportPdfCurrentView(){
+    setShowPdfGuide(false)
+    await exportPdf()
+  }
+  async function exportPdfHalves(){
+    setShowPdfGuide(false)
+    const container = document.querySelector('.center') as HTMLElement | null
+    const wrap = document.querySelector('.wm-wrap') as HTMLElement | null
+    if(!container || !wrap){ await exportPdf(); return }
+    const prev = wrap.scrollLeft
+    const max = Math.max(0, (wrap.scrollWidth - wrap.clientWidth))
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
-
-    // Breekpunten op basis van clone
-    const heads = Array.from(printRoot.querySelectorAll('.wm-evlhead')) as HTMLElement[]
-    const tableTop = clone.getBoundingClientRect().top
-    const breakYsDom = [0, ...heads.map(h=> Math.max(0, h.getBoundingClientRect().top - tableTop))].sort((a,b)=>a-b)
-
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
-    const canvas = await html2canvas(clone, { backgroundColor: bg, scale: 2 })
-    const ratio = pageW / canvas.width
-    const pageHeightPx = Math.floor(pageH / ratio)
-
-    const breakYs = breakYsDom.map(y=> Math.round(y))
-    if(breakYs[0] !== 0) breakYs.unshift(0)
-    if(breakYs[breakYs.length-1] < canvas.height) breakYs.push(canvas.height)
-
-    let current = 0
-    while(current < canvas.height){
-      const maxY = current + pageHeightPx
-      let chosen = -1
-      for(let i=0;i<breakYs.length;i++){
-        const by = breakYs[i]
-        if(by <= maxY && by > current){ chosen = by }
-      }
-      const sliceEnd = chosen>current ? chosen : Math.min(canvas.height, maxY)
-      const sliceHeight = sliceEnd - current
-      const tmp = document.createElement('canvas')
-      tmp.width = canvas.width
-      tmp.height = sliceHeight
-      const tctx = tmp.getContext('2d')!
-      tctx.drawImage(canvas, 0, current, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
-      const img = tmp.toDataURL('image/png')
-      const w = pageW
-      const h = sliceHeight * ratio
-      if(current>0) doc.addPage('a4','landscape')
-      doc.addImage(img, 'PNG', 0, 0, w, h)
-      current = sliceEnd
+    const capture = async ()=>{
+      const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+      const img = canvas.toDataURL('image/png')
+      const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
+      const w = canvas.width * ratio; const h = canvas.height * ratio
+      const x = (pageW - w)/2, y = (pageH - h)/2
+      doc.addImage(img, 'PNG', x, y, w, h)
     }
-    document.body.removeChild(printRoot)
-    doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
+    // Eerste helft (links)
+    wrap.scrollLeft = 0; await new Promise(r=> setTimeout(r, 200)); await capture()
+    // Tweede helft (rechts), alleen als er iets te scrollen is
+    if(max > 0){ doc.addPage('a4','landscape'); wrap.scrollLeft = max; await new Promise(r=> setTimeout(r, 200)); await capture() }
+    // Detailpagina's daarna
+    for(const a of (plan.artifacts||[])){
+      doc.addPage('a4','landscape')
+      const wrapEl = document.createElement('div')
+      wrapEl.style.width = '1000px'
+      wrapEl.style.padding = '16px'
+      wrapEl.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
+      wrapEl.innerHTML = `
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
+        <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
+          <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
+          <div>Casus</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
+          <div>Kennis</div><div>${(a.knowledgeIds||[]).join(', ')||'—'}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:6px">
+          <div>Variatie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.variatie||0)/5*100}%"></div></div></div>
+          <div>Relevantie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.relevantie||0)/5*100}%"></div></div></div>
+          <div>Authenticiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.authenticiteit||0)/5*100}%"></div></div></div>
+          <div>Actualiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.actualiteit||0)/5*100}%"></div></div></div>
+          <div>Kwantiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.kwantiteit||0)/5*100}%"></div></div></div>
+        </div>`
+      document.body.appendChild(wrapEl)
+      const c2 = await html2canvas(wrapEl, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+      const img2 = c2.toDataURL('image/png')
+      const r2 = Math.min(pageW / c2.width, pageH / c2.height)
+      const w2 = c2.width * r2, h2 = c2.height * r2
+      const x2 = (pageW - w2)/2, y2 = (pageH - h2)/2
+      doc.addImage(img2, 'PNG', x2, y2, w2, h2)
+      document.body.removeChild(wrapEl)
+    }
+    wrap.scrollLeft = prev
+    doc.save(`${localName.replace(/\s+/g,'_')}_portfolio_halves.pdf`)
   }
 
   return (
@@ -336,14 +338,10 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Bewijsstuk toevoegen
           </button>
-          <div className="row-actions">
-            <button className="btn" onClick={exportFitAll}>
+          <button className="btn" onClick={exportPdf}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16l-6-3-6 3V4a2 2 0 0 1 2-2z"/></svg>
-              PDF (altijd passend)
-            </button>
-            <button className="file-label" onClick={exportViewport}>PDF (weergave)
-            </button>
-          </div>
+            Exporteer PDF
+          </button>
           <button className="btn" onClick={()=>setShowList(true)}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             Alle bewijsstukken
@@ -527,6 +525,24 @@ export default function PlanDetail(){
             </div>
             <div className="modal-footer">
               <button className="btn" onClick={()=>setShowList(false)}>Sluiten</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPdfGuide && (
+        <div className="dialog-backdrop" onClick={()=>setShowPdfGuide(false)}>
+          <div className="dialog" onClick={e=>e.stopPropagation()}>
+            <h3>PDF export – beste resultaat</h3>
+            <ul>
+              <li>Zoom eerst zó in dat alle lesweken zichtbaar zijn in de matrix.</li>
+              <li>Sluit deze pop‑up en controleer of je echt alle kolommen ziet.</li>
+              <li>Is de tekst te klein? Kies “Exporteer in twee helften”.</li>
+            </ul>
+            <div className="dialog-actions">
+              <button className="file-label" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
+              <button className="file-label" onClick={exportPdfCurrentView}>PDF van huidige weergave</button>
+              <button className="btn" onClick={exportPdfHalves}>Exporteer in twee helften</button>
             </div>
           </div>
         </div>
