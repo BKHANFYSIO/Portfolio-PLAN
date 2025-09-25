@@ -137,6 +137,22 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     return () => { w.removeEventListener('scroll', onWrap); h.removeEventListener('scroll', onH) }
   }, [spacerW])
 
+  function getSelfLevel(lukId: string){
+    return (plan.selfLevels||{})[lukId] || 0
+  }
+  function setSelfLevel(lukId: string, val: number){
+    // opslaan in localStorage via plan object – eenvoudige write-back
+    try{
+      const plans = JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]')
+      const idx = plans.findIndex((p:any)=>p.id===plan.id)
+      const cur = plans[idx]
+      const next = { ...(cur||plan), selfLevels: { ...(cur?.selfLevels||plan.selfLevels||{}), [lukId]: val } }
+      if(idx>=0){ plans[idx]=next } else { plans.unshift(next) }
+      localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans))
+      ;(plan as any).selfLevels = next.selfLevels
+    }catch{}
+  }
+
   return (
     <>
     <div className={`wm-wrap${dragging ? ' dragging' : ''}`} ref={wrapRef}
@@ -204,7 +220,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               return <div key={w} className={`wm-col ${info?.isHoliday ? 'holiday':''}`} title={title}>{label}</div>
             })}
           </div>
-          <div className="wm-vcol sticky-right">VRAAK</div>
+          <div className="wm-vcol sticky-right split"><div>VRAAK</div><div className="cell">Zelfbeheersing</div></div>
         </div>
         <div className="wm-body">
           {evlForCourse.map(block => (
@@ -229,6 +245,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     })()
                   }
                 </div>
+                <div className="wm-self sticky-right">—</div>
               </div>
 
               {open[block.id] && block.outcomes.map(o => (
@@ -295,6 +312,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         return averageVraak(arts.map(a=>a.vraak))
                       })()
                     }
+                  </div>
+                  <div className="wm-self sticky-right">
+                    <input className="slider" type="range" min={1} max={5} step={1} value={getSelfLevel(o.id)} onChange={e=> setSelfLevel(o.id, Number(e.target.value))} />
                   </div>
                 </div>
               ))}

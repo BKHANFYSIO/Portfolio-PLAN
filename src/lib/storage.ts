@@ -38,6 +38,7 @@ export type PortfolioPlan = {
   courseName: string;
   period: { type: 'periode'|'semester'|'maatwerk'; value: number|[number,number]; label: string };
   artifacts: Artifact[];
+  selfLevels?: Record<string, number>; // LUK id -> 1..5 zelfbeheersing
   createdAt: number;
   updatedAt: number;
   favorite?: boolean;
