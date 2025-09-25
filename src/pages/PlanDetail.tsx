@@ -209,26 +209,37 @@ export default function PlanDetail(){
     const table = document.querySelector('.wm-table') as HTMLElement | null
     const header = document.querySelector('.wm-header') as HTMLElement | null
     const body = document.querySelector('.wm-body') as HTMLElement | null
-    if(!table || !header || !body) return
+    const wrap = document.querySelector('.wm-wrap') as HTMLElement | null
+    if(!table || !header || !body || !wrap) return
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
     const pageW = doc.internal.pageSize.getWidth(); const pageH = doc.internal.pageSize.getHeight()
     const margin = 24; const availW = pageW - margin*2
 
-    // Header render
-    const hCanvas = await html2canvas(header, { backgroundColor: bg, scale:2 })
-    const hRatio = availW / hCanvas.width
-    const headerH = hCanvas.height * hRatio
-    const drawHeader = () => { const img = hCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, margin, availW, headerH); return margin + headerH + 8 }
-    let y = drawHeader()
+    // Maak overflow tijdelijk zichtbaar zodat html2canvas ALLE weken kan tekenen
+    const prevOverflowX = wrap.style.overflowX
+    const prevOverflowY = wrap.style.overflowY
+    wrap.style.overflowX = 'visible'; wrap.style.overflowY = 'visible'
 
-    // Hoofdblokken renderen en pagineren
-    const blocks: HTMLElement[] = Array.from(body.children) as any
-    for(const el of blocks){
-      const bCanvas = await html2canvas(el, { backgroundColor: bg, scale:2 })
-      const r = availW / bCanvas.width; const h = bCanvas.height * r
-      if(y + h + margin > pageH){ doc.addPage('a4','landscape'); y = drawHeader() }
-      const img = bCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, y, availW, h); y += h + 12
+    try{
+      // Header render over volle breedte (scrollWidth)
+      const hCanvas = await html2canvas(header, { backgroundColor: bg, scale:2, width: header.scrollWidth, windowWidth: header.scrollWidth })
+      const hRatio = availW / hCanvas.width
+      const headerH = hCanvas.height * hRatio
+      const drawHeader = () => { const img = hCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, margin, availW, headerH); return margin + headerH + 8 }
+      let y = drawHeader()
+
+      // Elk hoofdelement (EVL/sectie) afzonderlijk, met breedteschaal op basis van scrollWidth
+      const blocks: HTMLElement[] = Array.from(body.children) as any
+      for(const el of blocks){
+        const wAll = el.scrollWidth || table.scrollWidth
+        const bCanvas = await html2canvas(el, { backgroundColor: bg, scale:2, width: wAll, windowWidth: wAll })
+        const r = availW / bCanvas.width; const h = bCanvas.height * r
+        if(y + h + margin > pageH){ doc.addPage('a4','landscape'); y = drawHeader() }
+        const img = bCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, y, availW, h); y += h + 12
+      }
+    }finally{
+      wrap.style.overflowX = prevOverflowX; wrap.style.overflowY = prevOverflowY
     }
     for(const a of (plan.artifacts||[])){
       doc.addPage('a4','landscape')
