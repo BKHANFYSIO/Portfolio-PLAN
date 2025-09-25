@@ -205,42 +205,19 @@ export default function PlanDetail(){
     setShowEdit(false)
   }
 
-  async function exportPdf(){
-    const table = document.querySelector('.wm-table') as HTMLElement | null
-    const header = document.querySelector('.wm-header') as HTMLElement | null
-    const body = document.querySelector('.wm-body') as HTMLElement | null
-    const wrap = document.querySelector('.wm-wrap') as HTMLElement | null
-    if(!table || !header || !body || !wrap) return
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
+  async function exportViewport(){
+    const container = document.querySelector('.center') as HTMLElement | null
+    if(!container) return
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-    const pageW = doc.internal.pageSize.getWidth(); const pageH = doc.internal.pageSize.getHeight()
-    const margin = 24; const availW = pageW - margin*2
-
-    // Maak overflow tijdelijk zichtbaar zodat html2canvas ALLE weken kan tekenen
-    const prevOverflowX = wrap.style.overflowX
-    const prevOverflowY = wrap.style.overflowY
-    wrap.style.overflowX = 'visible'; wrap.style.overflowY = 'visible'
-
-    try{
-      // Header render over volle breedte (scrollWidth)
-      const hCanvas = await html2canvas(header, { backgroundColor: bg, scale:2, width: header.scrollWidth, windowWidth: header.scrollWidth })
-      const hRatio = availW / hCanvas.width
-      const headerH = hCanvas.height * hRatio
-      const drawHeader = () => { const img = hCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, margin, availW, headerH); return margin + headerH + 8 }
-      let y = drawHeader()
-
-      // Elk hoofdelement (EVL/sectie) afzonderlijk, met breedteschaal op basis van scrollWidth
-      const blocks: HTMLElement[] = Array.from(body.children) as any
-      for(const el of blocks){
-        const wAll = el.scrollWidth || table.scrollWidth
-        const bCanvas = await html2canvas(el, { backgroundColor: bg, scale:2, width: wAll, windowWidth: wAll })
-        const r = availW / bCanvas.width; const h = bCanvas.height * r
-        if(y + h + margin > pageH){ doc.addPage('a4','landscape'); y = drawHeader() }
-        const img = bCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, y, availW, h); y += h + 12
-      }
-    }finally{
-      wrap.style.overflowX = prevOverflowX; wrap.style.overflowY = prevOverflowY
-    }
+    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+    const img = canvas.toDataURL('image/png')
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
+    const w = canvas.width * ratio
+    const h = canvas.height * ratio
+    const x = (pageW - w)/2, y = (pageH - h)/2
+    doc.addImage(img, 'PNG', x, y, w, h)
     for(const a of (plan.artifacts||[])){
       doc.addPage('a4','landscape')
       const wrap = document.createElement('div')
@@ -277,9 +254,63 @@ export default function PlanDetail(){
   useEffect(()=>{
     const p = new URLSearchParams(loc.search)
     if(p.get('export')==='pdf'){
-      setTimeout(()=>{ exportPdf() }, 300)
+      setTimeout(()=>{ exportFitAll() }, 400)
     }
   }, [loc.search])
+
+  // Altijd passend (alle weken) met verticale paginering op hoofdrijen
+  async function exportFitAll(){
+    const table = document.querySelector('.center .wm-table') as HTMLElement | null
+    if(!table) return
+    const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+
+    // Verzamel breekpunten (bovenranden van hoofdrijen)
+    const heads = Array.from(document.querySelectorAll('.center .wm-evlhead')) as HTMLElement[]
+    const tableTop = table.getBoundingClientRect().top + window.scrollY
+    const breakYsDom = [0, ...heads.map(h=> Math.max(0, (h.getBoundingClientRect().top + window.scrollY) - tableTop))]
+    breakYsDom.sort((a,b)=> a-b)
+
+    // Render volledige tabel naar canvas
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
+    const canvas = await html2canvas(table, { backgroundColor: bg, scale: 2 })
+    const ratio = pageW / canvas.width
+    const pageHeightPx = Math.floor(pageH / ratio)
+
+    // Converteer DOM-breekpunten naar canvas-coördinaten (aannemen 1:1 schaal vóór ratio)
+    const breakYs = breakYsDom.map(y=> Math.round(y))
+    if(breakYs[0] !== 0) breakYs.unshift(0)
+    if(breakYs[breakYs.length-1] < canvas.height) breakYs.push(canvas.height)
+
+    let current = 0
+    while(current < canvas.height){
+      const maxY = current + pageHeightPx
+      // Zoek grootste break <= maxY en > current
+      let next = breakYs.find((_,i)=> false) // placeholder
+      let chosen = -1
+      for(let i=0;i<breakYs.length;i++){
+        const by = breakYs[i]
+        if(by <= maxY && by > current){ chosen = by }
+      }
+      const sliceEnd = chosen>current ? chosen : Math.min(canvas.height, maxY)
+      const sliceHeight = sliceEnd - current
+      // Snij uit de hoofdcanvas
+      const tmp = document.createElement('canvas')
+      tmp.width = canvas.width
+      tmp.height = sliceHeight
+      const tctx = tmp.getContext('2d')!
+      tctx.drawImage(canvas, 0, current, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+      const img = tmp.toDataURL('image/png')
+      const w = pageW
+      const h = sliceHeight * ratio
+      if(current>0) doc.addPage('a4','landscape')
+      const x = 0, y = 0
+      doc.addImage(img, 'PNG', x, y, w, h)
+      current = sliceEnd
+    }
+    doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
+  }
 
   return (
     <div className="detail">
@@ -297,10 +328,14 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Bewijsstuk toevoegen
           </button>
-          <button className="btn" onClick={exportPdf}>
+          <div className="row-actions">
+            <button className="btn" onClick={exportFitAll}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16l-6-3-6 3V4a2 2 0 0 1 2-2z"/></svg>
-            Exporteer PDF
-          </button>
+              PDF (altijd passend)
+            </button>
+            <button className="file-label" onClick={exportViewport}>PDF (weergave)
+            </button>
+          </div>
           <button className="btn" onClick={()=>setShowList(true)}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             Alle bewijsstukken
