@@ -1,7 +1,7 @@
 .wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
 .wm-wrap.dragging{ cursor:grabbing }
 .wm-table{ display:block; min-width:100%; width:max-content; }
-.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content calc(var(--rightWidth)*2); background:var(--surface); z-index:30; left:0; width:100%; box-shadow: var(--sticky-shadow) }
+.wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) var(--right2Width); background:var(--surface); z-index:30; left:0; width:100%; box-shadow: var(--sticky-shadow) }
 .wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:1px solid var(--line-strong); z-index:4; box-sizing:border-box }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
@@ -10,8 +10,8 @@
 .wm-col{ padding:10px 8px; text-align:center; border-right:1px solid var(--line-strong); color:var(--text) }
 .wm-col.holiday{ background:rgba(255, 200, 0, .16); font-weight:600 }
 .wm-body{ width:100%; display:block }
-.wm-row{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) }
-.wm-evlhead{ display:grid; grid-template-columns: var(--leftWidth) max-content calc(var(--rightWidth)*2); align-items:stretch }
+.wm-row{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) var(--right2Width) }
+.wm-evlhead{ display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) var(--right2Width); align-items:stretch }
 .wm-rowhead{ position:sticky; left:0; background:var(--surface); width:var(--leftWidth); min-width:var(--leftWidth); padding:10px; border-top:1px solid var(--line); border-right:1px solid var(--line-strong); z-index:2; box-sizing:border-box }
 .wm-rowhead.evl{ font-weight:600; background:rgba(14,19,32,.08) }
 .caret{ display:inline-block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa6c6; margin-right:6px; transform:rotate(-90deg); transition:.2s }
@@ -23,14 +23,14 @@
 .wm-evlhead .wm-cell{ justify-content:center; padding:0 }
 .wm-col:last-child, .wm-cell:last-child{ border-right:none }
 .wm-vcol{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
-.wm-vcol.split{ display:grid; grid-template-columns: 1fr 1fr }
-.wm-vcol .cell{ border-left:1px solid var(--line-strong) }
+.wm-scol{ width:var(--right2Width); min-width:var(--right2Width); text-align:center; padding:10px 8px; border-left:1px solid var(--line-strong); background:var(--surface) }
 .wm-vraak{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
-.wm-self{ width:var(--rightWidth); min-width:var(--rightWidth); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
-.wm-self .slider{ width:100% }
+.wm-self{ width:var(--right2Width); min-width:var(--right2Width); text-align:center; padding:10px 8px; border-top:1px solid var(--line); border-left:1px solid var(--line-strong); background:var(--surface); display:flex; align-items:center; justify-content:center }
 .sticky-right{ position:sticky; right:0; background:var(--surface); z-index:10; box-shadow: -4px 0 8px rgba(14,19,32,.06) }
-/* Zorg dat de VRAAK-kop (header) altijd boven body-cellen ligt */
+.offset-r2{ right:var(--right2Width) }
+/* header z-indexen */
 .wm-vcol.sticky-right{ z-index:14 }
+.wm-scol.sticky-right{ z-index:16 }
 .wm-chip{ background:var(--tint-weak); border:1px solid rgba(79,124,255,.45); color:var(--text); padding:2px 6px; border-radius:999px; font-size:12px }
 
 /* Artifact regels in subrijen */
@@ -48,12 +48,31 @@
 .wm-art--floating .name{ white-space:normal; overflow:visible; text-overflow:clip }
 .wm-art .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px }
 
+/* Slider voor beheersingsniveau */
+/* Tegel-schuif voor beheersing */
+[data-theme-effective='light'] .self-tile{ border-color: rgba(14,19,32,.14) }
+.self-tile{ position:relative; width:100%; height:36px; border:1px solid rgba(255,255,255,.12); border-radius:8px; overflow:hidden; cursor:pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); background: rgba(255,255,255,.04) }
+[data-theme-effective='light'] .self-tile{ border-color: rgba(14,19,32,.14) }
+.self-tile .cover{ position:absolute; top:0; right:0; bottom:0; width:0%; background: var(--surface); transition: width .15s ease-out; pointer-events:none }
+.self-tile .ticks{ position:absolute; inset:0; display:flex; justify-content:space-between; align-items:stretch; pointer-events:none }
+.self-tile .ticks span{ width:1px; background: var(--line-strong); opacity:.6 }
+.self-tile .val{ position:absolute; right:6px; top:6px; font-size:12px; font-weight:600; text-shadow: 0 1px 2px rgba(0,0,0,.4); pointer-events:none }
+.self-tile .self-reset{ position:absolute; left:6px; top:6px; font-size:10px; padding:2px 6px }
+.self-tile:focus{ outline:2px solid var(--primary) }
+
 /* Preview popup */
 .wm-preview-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000 }
 .wm-preview{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; width:min(640px,92vw); max-height:80vh; overflow:auto; padding:12px }
 .wm-vbars{ display:grid; grid-template-columns:100px 1fr; gap:6px; align-items:center }
 .wm-vbar{ height:8px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden }
 .wm-vbar .fill{ height:100%; background:var(--primary) }
+
+/* Mini VRAAK staafdiagrammen in hoofdrijen */
+.vraak-bars{ height:28px; display:flex; align-items:flex-end; justify-content:center; gap:6px; padding:0 2px }
+.vraak-bars .bar{ position:relative; width:12px; height:100%; background:rgba(255,255,255,.10); border-radius:3px }
+[data-theme-effective='light'] .vraak-bars .bar{ background:rgba(14,19,32,.10) }
+.vraak-bars .bar .fill{ position:absolute; left:0; right:0; bottom:0; height:0%; border-radius:3px; transition:height .2s ease }
+.vraak-bars .bar .lbl{ position:absolute; bottom:-14px; left:50%; transform:translateX(-50%); font-size:10px; color:var(--muted) }
 
 /* masker om de sticky linkerkolom vrij te houden van de horizontale scrollbar */
 .wm-mask-left{ position:sticky; left:0; bottom:0; width:var(--leftWidth); height:12px; background:var(--surface); z-index:5 }

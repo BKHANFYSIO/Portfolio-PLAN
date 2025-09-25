@@ -71,6 +71,44 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     return avg.toFixed(2)
   }
 
+  // Bereken VRAAK-balken per verzameling artifacts en (optioneel) per-subrij ids
+  function computeVraakBars(arts: Artifact[], subIds?: string[]): { v:number; r:number; a1:number; a2:number; k:number }{
+    const clamp = (x:number)=> Math.max(1, Math.min(5, x))
+    if(!arts || arts.length===0){
+      return { v:1, r:1, a1:1, a2:1, k:1 }
+    }
+    const unique = <T,>(arr:T[]) => Array.from(new Set(arr))
+    const kinds = unique(arts.map(a=> a.kind||'overig')).length
+    const persp = unique(arts.flatMap(a=> Array.isArray(a.perspectives)?a.perspectives:[])).length
+    const sKinds = Math.min(1, kinds/4)
+    const sPersp = Math.min(1, persp/5)
+    const v = clamp(1 + 4*(0.6*sKinds + 0.4*sPersp))
+
+    const rVals = arts.map(a=> (a.vraak?.relevantie ?? 1))
+    const r = clamp(rVals.reduce((a,b)=>a+b,0)/rVals.length)
+
+    let a1 = 1
+    if(subIds && subIds.length>0){
+      const perSub = subIds.map(id => {
+        const inSub = arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id))
+        if(inSub.length===0) return 1
+        return Math.max(...inSub.map(a=> (a.vraak?.authenticiteit ?? 1)))
+      })
+      a1 = clamp(perSub.reduce((a,b)=>a+b,0)/perSub.length)
+    }else{
+      const vals = arts.map(a=> (a.vraak?.authenticiteit ?? 1))
+      a1 = clamp(vals.reduce((a,b)=>a+b,0)/vals.length)
+    }
+
+    const daysBetween = (ms:number)=> Math.floor((Date.now() - ms)/(24*3600*1000))
+    const recencyScore = (d:number)=> (d<=90?5:d<=180?4:d<=365?3:d<=540?2:1)
+    const a2 = clamp(arts.map(a=> recencyScore(daysBetween(a.createdAt||Date.now()))).reduce((a,b)=>a+b,0)/arts.length)
+
+    const target = 5
+    const k = clamp(1 + 4*Math.min(1, arts.length/target))
+    return { v,r,a1,a2,k }
+  }
+
   const wrapRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const hScrollRef = useRef<HTMLDivElement>(null)
@@ -100,6 +138,35 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     course?.cases.forEach(c=> m.set(c.id, c.name))
     return m
   }, [course])
+
+  // Zelfbeheersing – lokale state voor directe rendering
+  const [selfLevels, setSelfLevels] = useState<Record<string, number>>(()=> ({...((plan as any)?.selfLevels||{})}))
+  useEffect(()=>{ setSelfLevels({...((plan as any)?.selfLevels||{})}) }, [plan.id])
+  const updateSelfLevel = (lukId: string, val: number) => {
+    setSelfLevels(cur => {
+      const next = { ...cur, [lukId]: val }
+      try{
+        const plans = JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]')
+        const idx = plans.findIndex((p:any)=>p.id===plan.id)
+        const curPlan = plans[idx]
+        const saved = { ...(curPlan||plan), selfLevels: next }
+        if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) }
+        localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans))
+        ;(plan as any).selfLevels = next
+      }catch{}
+      return next
+    })
+  }
+
+  // Kleurfunctie: 1 (rood) → 5 (groen), continu voor gemiddelden
+  const colorFor = (v: number) => {
+    const clamped = Math.max(1, Math.min(5, v))
+    const t = (clamped - 1) / 4 // 0..1
+    const hue = 0 + (120 * t) // 0=red → 120=green
+    const sat = 70
+    const light = 45
+    return `hsl(${hue.toFixed(0)} ${sat}% ${light}%)`
+  }
   const knowlNameById = useMemo(()=>{
     const m = new Map<string,string>()
     course?.knowledgeDomains.forEach(k=> m.set(k.id, k.name))
@@ -136,22 +203,6 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     h.addEventListener('scroll', onH, { passive: true })
     return () => { w.removeEventListener('scroll', onWrap); h.removeEventListener('scroll', onH) }
   }, [spacerW])
-
-  function getSelfLevel(lukId: string){
-    return (plan.selfLevels||{})[lukId] || 0
-  }
-  function setSelfLevel(lukId: string, val: number){
-    // opslaan in localStorage via plan object – eenvoudige write-back
-    try{
-      const plans = JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]')
-      const idx = plans.findIndex((p:any)=>p.id===plan.id)
-      const cur = plans[idx]
-      const next = { ...(cur||plan), selfLevels: { ...(cur?.selfLevels||plan.selfLevels||{}), [lukId]: val } }
-      if(idx>=0){ plans[idx]=next } else { plans.unshift(next) }
-      localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans))
-      ;(plan as any).selfLevels = next.selfLevels
-    }catch{}
-  }
 
   return (
     <>
@@ -191,7 +242,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
       onPointerCancel={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
       onPointerLeave={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
     >
-      <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: '88px', ['--leftWidth' as any]: '300px', ['--rightWidth' as any]: '132px' }}>
+      <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: '88px', ['--leftWidth' as any]: '300px', ['--rightWidth' as any]: '132px', ['--right2Width' as any]: '132px' }}>
         <div className="wm-header">
           <div className="wm-corner">
             <div className="wm-corner-inner">
@@ -220,7 +271,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               return <div key={w} className={`wm-col ${info?.isHoliday ? 'holiday':''}`} title={title}>{label}</div>
             })}
           </div>
-          <div className="wm-vcol sticky-right split"><div>VRAAK</div><div className="cell">Zelfbeheersing</div></div>
+          <div className="wm-vcol sticky-right offset-r2">VRAAK</div>
+          <div className="wm-scol sticky-right">Beheersing</div>
         </div>
         <div className="wm-body">
           {evlForCourse.map(block => (
@@ -236,16 +288,41 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 return <div key={`evlh-${block.id}-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — week ${w}`) }}>{list.length}</button>}</div>
                   })}
                 </div>
-                <div className="wm-vraak sticky-right">
+                <div className="wm-vraak sticky-right offset-r2">
+                  {(()=>{
+                    const outcomeIds = block.outcomes.map(o=>o.id)
+                    const arts = (plan.artifacts||[]).filter(a=> weeks.includes(a.week) && a.evlOutcomeIds.some(id=> outcomeIds.includes(id)))
+                    const bars = computeVraakBars(arts, outcomeIds)
+                    const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
+                    return (
+                      <div className="vraak-bars" title={`V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`}>
+                        {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> (
+                          <div key={i} className="bar"><div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} /><div className="lbl">{lbl}</div></div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+                <div className="wm-self sticky-right">
                   {
                     (()=>{
                       const outcomeIds = block.outcomes.map(o=>o.id)
-                      const arts = (plan.artifacts||[]).filter(a=> weeks.includes(a.week) && a.evlOutcomeIds.some(id=> outcomeIds.includes(id)))
-                      return averageVraak(arts.map(a=>a.vraak))
+                      // Neem ook default 1 mee voor niet-ingevulde subrijen
+                      const vals = outcomeIds.map(id => ( selfLevels?.[id] ?? 1 ))
+                      const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
+                      const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
+                      return (
+                        <div className="self-tile" aria-hidden title={`Gemiddeld: ${avg.toFixed(1)}`} style={{ background: colorFor(avg) }}>
+                          <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
+                          <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
+                            setSelfLevels(cur=>{ const next={...cur}; for(const id of outcomeIds) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
+                          }}>reset</button>
+                          <div className="val">{avg.toFixed(1)}</div>
+                        </div>
+                      )
                     })()
                   }
                 </div>
-                <div className="wm-self sticky-right">—</div>
               </div>
 
               {open[block.id] && block.outcomes.map(o => (
@@ -305,7 +382,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     )
                   })}
                   </div>
-                  <div className="wm-vraak sticky-right">
+                  <div className="wm-vraak sticky-right offset-r2">
                     {
                       (()=>{
                         const arts = (plan.artifacts||[]).filter(a => weeks.includes(a.week) && a.evlOutcomeIds.includes(o.id))
@@ -314,7 +391,46 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     }
                   </div>
                   <div className="wm-self sticky-right">
-                    <input className="slider" type="range" min={1} max={5} step={1} value={getSelfLevel(o.id)} onChange={e=> setSelfLevel(o.id, Number(e.target.value))} />
+                    {(()=>{
+                      const current = Number((selfLevels?.[o.id]||0) || 0)
+                      const toWidth = (v:number)=> `${Math.max(0, Math.min(5,v)) / 5 * 100}%`
+                      const setVal = (v:number)=>{
+                        updateSelfLevel(o.id, v)
+                      }
+                      const onPointer = (clientX: number, el: HTMLDivElement)=>{
+                        const rect = el.getBoundingClientRect()
+                        const rel = (clientX - rect.left) / rect.width
+                        const step = Math.min(5, Math.max(1, Math.round(rel*5)))
+                        setVal(step)
+                      }
+                      const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
+                        e.stopPropagation()
+                        const el = e.currentTarget
+                        el.setPointerCapture?.(e.pointerId)
+                        onPointer(e.clientX, el)
+                        const move = (ev: PointerEvent)=>{ if(ev.buttons&1){ onPointer(ev.clientX, el) } }
+                        const up = ()=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true) }
+                        window.addEventListener('pointermove', move, true)
+                        window.addEventListener('pointerup', up, true)
+                      }
+                      const onKey = (e: React.KeyboardEvent<HTMLDivElement>)=>{
+                        if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); setVal(Math.max(1, (current||1)-1)) }
+                        if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); setVal(Math.min(5, (current||1)+1)) }
+                      }
+                      return (
+                        <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
+                          style={{ background: colorFor(current||1) }}
+                          onPointerDown={onDown}
+                          onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
+                          onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
+                          title={`Beheersing: ${current||1}/5`}
+                        >
+                          <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
+                          <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
+                          <div className="val">{current||1}</div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               ))}
@@ -331,11 +447,37 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   return <div key={`cash-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Casussen — week ${w}`)}>{list.length}</button>}</div>
                 })}
               </div>
-              <div className="wm-vraak sticky-right">
+              <div className="wm-vraak sticky-right offset-r2">
+                {(()=>{
+                  const arts = (plan.artifacts||[]).filter(a=> weeks.includes(a.week) && a.caseIds.length>0)
+                  const bars = computeVraakBars(arts)
+                  const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
+                  return (
+                    <div className="vraak-bars" title={`V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`}>
+                      {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> (
+                        <div key={i} className="bar"><div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} /><div className="lbl">{lbl}</div></div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+              <div className="wm-self sticky-right">
                 {
                   (()=>{
-                    const arts = (plan.artifacts||[]).filter(a=> weeks.includes(a.week) && a.caseIds.length>0)
-                    return averageVraak(arts.map(a=>a.vraak))
+                    const ids = course?.cases.map(c=>c.id) || []
+                    if(ids.length===0) return '—'
+                    const vals = ids.map(id => ( selfLevels?.[id] ?? 1 ))
+                    const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
+                    const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
+                    return (
+                      <div className="self-tile" aria-hidden title={`Gemiddeld: ${avg.toFixed(1)}`} style={{ background: colorFor(avg) }}>
+                        <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
+                        <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
+                          setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
+                        }}>reset</button>
+                        <div className="val">{avg.toFixed(1)}</div>
+                      </div>
+                    )
                   })()
                 }
               </div>
@@ -349,13 +491,49 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     return <div key={w} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `${c.name} — week ${w}`)}>{list.length}</button>}</div>
                   })}
                 </div>
-                <div className="wm-vraak sticky-right">
+                <div className="wm-vraak sticky-right offset-r2">
                   {
                     (()=>{
                       const arts = (plan.artifacts||[]).filter(a => weeks.includes(a.week) && a.caseIds.includes(c.id))
                       return averageVraak(arts.map(a=>a.vraak))
                     })()
                   }
+                </div>
+                <div className="wm-self sticky-right">
+                  {(()=>{
+                    const current = Number((selfLevels?.[c.id]||0) || 0)
+                    const toWidth = (v:number)=> `${Math.max(0, Math.min(5,v)) / 5 * 100}%`
+                    const onPointer = (clientX: number, el: HTMLDivElement)=>{
+                      const rect = el.getBoundingClientRect()
+                      const rel = (clientX - rect.left) / rect.width
+                      const step = Math.min(5, Math.max(1, Math.round(rel*5)))
+                      updateSelfLevel(c.id, step)
+                    }
+                    const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
+                      e.stopPropagation(); const el = e.currentTarget; el.setPointerCapture?.(e.pointerId)
+                      onPointer(e.clientX, el)
+                      const move = (ev: PointerEvent)=>{ if(ev.buttons&1){ onPointer(ev.clientX, el) } }
+                      const up = ()=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true) }
+                      window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true)
+                    }
+                    const onKey = (e: React.KeyboardEvent<HTMLDivElement>)=>{
+                      if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); updateSelfLevel(c.id, Math.max(1, (current||1)-1)) }
+                      if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); updateSelfLevel(c.id, Math.min(5, (current||1)+1)) }
+                    }
+                    return (
+                      <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
+                        style={{ background: colorFor(current||1) }}
+                        onPointerDown={onDown}
+                        onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
+                        onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
+                        title={`Beheersing: ${current||1}/5`}
+                      >
+                        <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
+                        <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
+                        <div className="val">{current||1}</div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             ))}
@@ -371,11 +549,37 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   return <div key={`kenh-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Kennis — week ${w}`)}>{list.length}</button>}</div>
                 })}
               </div>
-              <div className="wm-vraak sticky-right">
+              <div className="wm-vraak sticky-right offset-r2">
+                {(()=>{
+                  const arts = (plan.artifacts||[]).filter(a=> weeks.includes(a.week) && a.knowledgeIds.length>0)
+                  const bars = computeVraakBars(arts)
+                  const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
+                  return (
+                    <div className="vraak-bars" title={`V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`}>
+                      {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> (
+                        <div key={i} className="bar"><div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} /><div className="lbl">{lbl}</div></div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+              <div className="wm-self sticky-right">
                 {
                   (()=>{
-                    const arts = (plan.artifacts||[]).filter(a=> weeks.includes(a.week) && a.knowledgeIds.length>0)
-                    return averageVraak(arts.map(a=>a.vraak))
+                    const ids = course?.knowledgeDomains.map(k=>k.id) || []
+                    if(ids.length===0) return '—'
+                    const vals = ids.map(id => ( selfLevels?.[id] ?? 1 ))
+                    const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
+                    const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
+                    return (
+                      <div className="self-tile" aria-hidden title={`Gemiddeld: ${avg.toFixed(1)}`} style={{ background: colorFor(avg) }}>
+                        <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
+                        <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
+                          setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
+                        }}>reset</button>
+                        <div className="val">{avg.toFixed(1)}</div>
+                      </div>
+                    )
                   })()
                 }
               </div>
@@ -389,13 +593,49 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     return <div key={w} className="wm-cell">{list.length>0 && <div className="wm-chip">{list.length}</div>}</div>
                   })}
                 </div>
-                <div className="wm-vraak sticky-right">
+                <div className="wm-vraak sticky-right offset-r2">
                   {
                     (()=>{
                       const arts = (plan.artifacts||[]).filter(a => weeks.includes(a.week) && a.knowledgeIds.includes(k.id))
                       return averageVraak(arts.map(a=>a.vraak))
                     })()
                   }
+                </div>
+                <div className="wm-self sticky-right">
+                  {(()=>{
+                    const current = Number((selfLevels?.[k.id]||0) || 0)
+                    const toWidth = (v:number)=> `${Math.max(0, Math.min(5,v)) / 5 * 100}%`
+                    const onPointer = (clientX: number, el: HTMLDivElement)=>{
+                      const rect = el.getBoundingClientRect()
+                      const rel = (clientX - rect.left) / rect.width
+                      const step = Math.min(5, Math.max(1, Math.round(rel*5)))
+                      updateSelfLevel(k.id, step)
+                    }
+                    const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
+                      e.stopPropagation(); const el = e.currentTarget; el.setPointerCapture?.(e.pointerId)
+                      onPointer(e.clientX, el)
+                      const move = (ev: PointerEvent)=>{ if(ev.buttons&1){ onPointer(ev.clientX, el) } }
+                      const up = ()=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true) }
+                      window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true)
+                    }
+                    const onKey = (e: React.KeyboardEvent<HTMLDivElement>)=>{
+                      if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); updateSelfLevel(k.id, Math.max(1, (current||1)-1)) }
+                      if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); updateSelfLevel(k.id, Math.min(5, (current||1)+1)) }
+                    }
+                    return (
+                      <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
+                        style={{ background: colorFor(current||1) }}
+                        onPointerDown={onDown}
+                        onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
+                        onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
+                        title={`Beheersing: ${current||1}/5`}
+                      >
+                        <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
+                        <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
+                        <div className="val">{current||1}</div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             ))}
