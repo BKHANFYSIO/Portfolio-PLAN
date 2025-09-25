@@ -251,13 +251,7 @@ export default function PlanDetail(){
     doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
   }
 
-  useEffect(()=>{
-    const p = new URLSearchParams(loc.search)
-    if(p.get('export')==='pdf'){
-      // Open eerst de instructie-popup in plaats van direct te exporteren
-      setShowPdfGuide(true)
-    }
-  }, [loc.search])
+  // Verwijderd auto-open via query; popup verschijnt alleen via knop
 
   // Instructies en varianten voor PDF-export
   const [showPdfGuide, setShowPdfGuide] = useState(false)
@@ -338,7 +332,7 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Bewijsstuk toevoegen
           </button>
-          <button className="btn" onClick={exportPdf}>
+          <button className="btn" onClick={()=> setShowPdfGuide(true)}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16l-6-3-6 3V4a2 2 0 0 1 2-2z"/></svg>
             Exporteer PDF
           </button>
@@ -365,6 +359,24 @@ export default function PlanDetail(){
       </section>
 
       {showAdd && <AddArtifactDialog plan={{...plan, name: localName}} onClose={()=>setShowAdd(false)} onSaved={()=>{}} />}
+
+      {showPdfGuide && (
+        <div className="dialog-backdrop" onClick={()=>setShowPdfGuide(false)}>
+          <div className="dialog" onClick={e=>e.stopPropagation()}>
+            <h3>PDF export – beste resultaat</h3>
+            <ul>
+              <li>Zoom eerst zó in dat alle lesweken zichtbaar zijn in de matrix.</li>
+              <li>Sluit deze pop‑up en controleer of je echt alle kolommen ziet.</li>
+              <li>Is de tekst te klein? Kies “Exporteer in twee helften”.</li>
+            </ul>
+            <div className="dialog-actions">
+              <button className="file-label" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
+              <button className="file-label" onClick={exportPdfCurrentView}>PDF van huidige weergave</button>
+              <button className="btn" onClick={exportPdfHalves}>Exporteer in twee helften</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showEdit && (
         <div className="modal-backdrop" onClick={()=>setShowEdit(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>

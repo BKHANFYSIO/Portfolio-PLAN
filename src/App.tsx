@@ -139,7 +139,7 @@ function App() {
                 <div className="row-actions">
                   <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
                   <button onClick={()=>toggleFavorite(p.id)}>{p.favorite ? '★' : '☆'}</button>
-                  <Link className="file-label" to={`/plan/${p.id}?export=pdf`}>PDF</Link>
+                  {/* PDF export verplaatst naar detailpagina */}
                   <button className="danger" onClick={()=>remove(p.id)}>Verwijderen</button>
                 </div>
               </li>
@@ -154,7 +154,7 @@ function App() {
                 <div className="row-actions">
                   <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
                   <button onClick={()=>toggleFavorite(p.id)}>{p.favorite ? '★' : '☆'}</button>
-                  <Link className="file-label" to={`/plan/${p.id}?export=pdf`}>PDF</Link>
+                  {/* PDF export verplaatst naar detailpagina */}
                   <button className="danger" onClick={()=>remove(p.id)}>Verwijderen</button>
                 </div>
               </li>
