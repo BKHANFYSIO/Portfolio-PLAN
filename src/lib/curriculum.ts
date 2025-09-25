@@ -250,7 +250,8 @@ export async function importTemplatesFromPublic(): Promise<TemplateArtifact[]>{
         const name = String(r['Naam']||r['name']||'').trim()
         if(!name) continue
         const evl = String(r['EVL']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
-        const cases = String(r['Casussen']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
+        const casesCol = (r as any)['Casussen'] ?? (r as any)['Thema’s'] ?? (r as any)["Thema's"] ?? (r as any)['Themas'] ?? (r as any)['Thema'] ?? ''
+        const cases = String(casesCol||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
         const knowledge = String(r['Kennis']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
         const vraak = {
           variatie: Number(r['Variatie']||3), relevantie: Number(r['Relevantie']||3), authenticiteit: Number(r['Authenticiteit']||3), actualiteit: Number(r['Actualiteit']||3), kwantiteit: Number(r['Kwantiteit']||3)

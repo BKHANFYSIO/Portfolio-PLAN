@@ -174,7 +174,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
 
         {mode==='wizard' && step===3 && (
           <div>
-            <h4>Casussen</h4>
+            <h4>Casussen / Thema’s</h4>
             <div className="luk">
               {course.cases.map(c=> (
                 <label key={c.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
@@ -288,7 +288,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
               ))}
             </fieldset>
             <fieldset>
-              <legend>Casussen</legend>
+              <legend>Casussen / Thema’s</legend>
               <div>
                 {course.cases.map(c=> (
                   <label key={c.id} style={{display:'inline-flex',gap:6,marginRight:12}}>

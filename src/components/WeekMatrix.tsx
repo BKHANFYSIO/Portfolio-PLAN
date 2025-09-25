@@ -304,7 +304,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
           {/* Casussen sectie */}
           <div>
               <div className="wm-evlhead" onClick={()=>setOpenCasus(v=>!v)}>
-              <div className="wm-rowhead evl"><span className={openCasus ? 'caret down':'caret'} /> Casussen</div>
+              <div className="wm-rowhead evl"><span className={openCasus ? 'caret down':'caret'} /> Casussen / Thema’s</div>
               <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.length>0)

@@ -229,7 +229,7 @@ export default function PlanDetail(){
         <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
         <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
           <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
-          <div>Casus</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
+          <div>Casus / Thema</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
           <div>Kennis</div><div>${(a.knowledgeIds||[]).join(', ')||'—'}</div>
         </div>
         <div style="display:grid;grid-template-columns:120px 1fr;gap:6px">
@@ -550,7 +550,7 @@ export default function PlanDetail(){
               ))}
             </fieldset>
             <fieldset>
-              <legend>Casussen</legend>
+              <legend>Casussen / Thema’s</legend>
               <div>
                 {course?.cases.map(c=> (
                   <label key={c.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
