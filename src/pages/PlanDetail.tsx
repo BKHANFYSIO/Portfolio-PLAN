@@ -206,18 +206,30 @@ export default function PlanDetail(){
   }
 
   async function exportPdf(){
-    const container = document.querySelector('.center') as HTMLElement | null
-    if(!container) return
+    const table = document.querySelector('.wm-table') as HTMLElement | null
+    const header = document.querySelector('.wm-header') as HTMLElement | null
+    const body = document.querySelector('.wm-body') as HTMLElement | null
+    if(!table || !header || !body) return
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-    const img = canvas.toDataURL('image/png')
-    const pageW = doc.internal.pageSize.getWidth()
-    const pageH = doc.internal.pageSize.getHeight()
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-    const w = canvas.width * ratio
-    const h = canvas.height * ratio
-    const x = (pageW - w)/2, y = (pageH - h)/2
-    doc.addImage(img, 'PNG', x, y, w, h)
+    const pageW = doc.internal.pageSize.getWidth(); const pageH = doc.internal.pageSize.getHeight()
+    const margin = 24; const availW = pageW - margin*2
+
+    // Header render
+    const hCanvas = await html2canvas(header, { backgroundColor: bg, scale:2 })
+    const hRatio = availW / hCanvas.width
+    const headerH = hCanvas.height * hRatio
+    const drawHeader = () => { const img = hCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, margin, availW, headerH); return margin + headerH + 8 }
+    let y = drawHeader()
+
+    // Hoofdblokken renderen en pagineren
+    const blocks: HTMLElement[] = Array.from(body.children) as any
+    for(const el of blocks){
+      const bCanvas = await html2canvas(el, { backgroundColor: bg, scale:2 })
+      const r = availW / bCanvas.width; const h = bCanvas.height * r
+      if(y + h + margin > pageH){ doc.addPage('a4','landscape'); y = drawHeader() }
+      const img = bCanvas.toDataURL('image/png'); doc.addImage(img,'PNG', margin, y, availW, h); y += h + 12
+    }
     for(const a of (plan.artifacts||[])){
       doc.addPage('a4','landscape')
       const wrap = document.createElement('div')
