@@ -262,23 +262,34 @@ export default function PlanDetail(){
   async function exportFitAll(){
     const table = document.querySelector('.center .wm-table') as HTMLElement | null
     if(!table) return
+    // Maak een off-screen print root zodat overflow/sticky niets afknijpt
+    const printRoot = document.createElement('div')
+    printRoot.className = 'print-root'
+    Object.assign(printRoot.style, { position:'fixed', left:'-99999px', top:'0', background:getComputedStyle(document.documentElement).getPropertyValue('--surface')||'#fff', padding:'0', margin:'0', zIndex:'-1' } as any)
+    const style = document.createElement('style')
+    style.textContent = `.print-root .sticky-right{ position:static !important; box-shadow:none !important }
+    .print-root .wm-header{ position:static !important; box-shadow:none !important }
+    .print-root .wm-rowhead{ position:sticky; left:0 }
+    .print-root .wm-hscroll{ display:none !important }`
+    printRoot.appendChild(style)
+    const clone = table.cloneNode(true) as HTMLElement
+    printRoot.appendChild(clone)
+    document.body.appendChild(printRoot)
+
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
 
-    // Verzamel breekpunten (bovenranden van hoofdrijen)
-    const heads = Array.from(document.querySelectorAll('.center .wm-evlhead')) as HTMLElement[]
-    const tableTop = table.getBoundingClientRect().top + window.scrollY
-    const breakYsDom = [0, ...heads.map(h=> Math.max(0, (h.getBoundingClientRect().top + window.scrollY) - tableTop))]
-    breakYsDom.sort((a,b)=> a-b)
+    // Breekpunten op basis van clone
+    const heads = Array.from(printRoot.querySelectorAll('.wm-evlhead')) as HTMLElement[]
+    const tableTop = clone.getBoundingClientRect().top
+    const breakYsDom = [0, ...heads.map(h=> Math.max(0, h.getBoundingClientRect().top - tableTop))].sort((a,b)=>a-b)
 
-    // Render volledige tabel naar canvas
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
-    const canvas = await html2canvas(table, { backgroundColor: bg, scale: 2 })
+    const canvas = await html2canvas(clone, { backgroundColor: bg, scale: 2 })
     const ratio = pageW / canvas.width
     const pageHeightPx = Math.floor(pageH / ratio)
 
-    // Converteer DOM-breekpunten naar canvas-coördinaten (aannemen 1:1 schaal vóór ratio)
     const breakYs = breakYsDom.map(y=> Math.round(y))
     if(breakYs[0] !== 0) breakYs.unshift(0)
     if(breakYs[breakYs.length-1] < canvas.height) breakYs.push(canvas.height)
@@ -286,8 +297,6 @@ export default function PlanDetail(){
     let current = 0
     while(current < canvas.height){
       const maxY = current + pageHeightPx
-      // Zoek grootste break <= maxY en > current
-      let next = breakYs.find((_,i)=> false) // placeholder
       let chosen = -1
       for(let i=0;i<breakYs.length;i++){
         const by = breakYs[i]
@@ -295,7 +304,6 @@ export default function PlanDetail(){
       }
       const sliceEnd = chosen>current ? chosen : Math.min(canvas.height, maxY)
       const sliceHeight = sliceEnd - current
-      // Snij uit de hoofdcanvas
       const tmp = document.createElement('canvas')
       tmp.width = canvas.width
       tmp.height = sliceHeight
@@ -305,10 +313,10 @@ export default function PlanDetail(){
       const w = pageW
       const h = sliceHeight * ratio
       if(current>0) doc.addPage('a4','landscape')
-      const x = 0, y = 0
-      doc.addImage(img, 'PNG', x, y, w, h)
+      doc.addImage(img, 'PNG', 0, 0, w, h)
       current = sliceEnd
     }
+    document.body.removeChild(printRoot)
     doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
   }
 
