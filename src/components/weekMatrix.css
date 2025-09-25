@@ -78,7 +78,7 @@
 .wm-mask-left{ position:sticky; left:0; bottom:0; width:var(--leftWidth); height:12px; background:var(--surface); z-index:5 }
 
 /* Altijd-zichtbare horizontale scroll-balk gesynchroniseerd met inhoud */
-.wm-hscroll{ position:sticky; bottom:0; left:0; right:0; height:14px; overflow-x:auto; overflow-y:hidden; background:transparent; z-index:20; margin-left:var(--leftWidth); margin-right:calc(var(--rightWidth) + var(--right2Width)) }
+.wm-hscroll{ position:sticky; bottom:0; left:0; right:0; height:14px; overflow-x:auto; overflow-y:hidden; background:transparent; z-index:20 }
 .wm-hspacer{ height:1px }
 .sticky-bottom{ position:sticky }
 
