@@ -16,7 +16,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const [mode, setMode] = useState<'wizard'|'full'>(initialMode)
   const [step, setStep] = useState(0) // stap 0 = keuze sjabloon of vrije invoer
   const TOTAL_STEPS = 6
-  const [startChoice, setStartChoice] = useState<'template'|'free'|''>(()=> (localStorage.getItem('pf-add-choice') as any) || '')
+  const [startChoice, setStartChoice] = useState<'template'|'free'|''>('')
   const [chosenTemplate, setChosenTemplate] = useState<string>('')
   const [name, setName] = useState('')
   const [week, setWeek] = useState<number|''>('')
@@ -122,7 +122,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
             <h4>Startoptie</h4>
             <div style={{display:'grid', gap:8}}>
               <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
-                <input type="radio" checked={startChoice==='template'} onChange={()=>{ setStartChoice('template'); localStorage.setItem('pf-add-choice','template') }} /> Sjabloon gebruiken
+                <input type="radio" checked={startChoice==='template'} onChange={()=>{ setStartChoice('template') }} /> Sjabloon gebruiken
               </label>
               {startChoice==='template' && (
                 <div style={{paddingLeft:22}}>
@@ -152,7 +152,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 </div>
               )}
               <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
-                <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free'); localStorage.setItem('pf-add-choice','free') }} /> Vrije invoer
+                <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free') }} /> Vrije invoer
               </label>
               {startChoice==='free' && (
                 <div className="muted" style={{fontSize:12, paddingLeft:22}}>
