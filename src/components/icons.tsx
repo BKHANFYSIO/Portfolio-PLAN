@@ -1,6 +1,14 @@
 
 export type KindKey = 'certificaat'|'schriftelijk'|'kennistoets'|'vaardigheid'|'performance'|'gesprek'|'document'|'toets'|'overig'|string|undefined
-export type PerspectiveKey = 'zelfreflectie'|'peer'|'ouderejaars'|'docent'|'extern'
+export type PerspectiveKey =
+  | 'zelfreflectie'
+  | 'docent'
+  | 'student-p'
+  | 'student-hf1'
+  | 'student-hf2-3'
+  | 'stagebegeleider'
+  | 'patient'
+  | 'overig'
 
 export function KindIcon({ kind, className }: { kind: KindKey; className?: string }){
   const stroke = 'currentColor'
@@ -32,14 +40,20 @@ export function PerspectiveIcon({ p, className }: { p: PerspectiveKey; className
   switch(p){
     case 'zelfreflectie':
       return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z"/></svg>
-    case 'peer':
-      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><circle cx="16" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M4 18v-1c0-2.2 2.7-4 6-4m4 0c3.3 0 6 1.8 6 4v1"/></svg>
-    case 'ouderejaars':
-      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M3 7l9-4 9 4-9 4-9-4zM3 12l9 4 9-4"/></svg>
     case 'docent':
       return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M4 5h12v10H4z"/><path stroke={stroke} fill="none" strokeWidth="2" d="M6 7h8M6 10h8M20 6v12l-4-3-4 3V6"/></svg>
-    case 'extern':
-      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M12 3v6l4 2"/></svg>
+    case 'student-p':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M4 18v-1c0-2.2 2.7-4 6-4"/></svg>
+    case 'student-hf1':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><text x="13" y="12" fontSize="6" fill="currentColor">1</text></svg>
+    case 'student-hf2-3':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke={stroke} fill="none" strokeWidth="2"/><text x="13" y="12" fontSize="6" fill="currentColor">2/3</text></svg>
+    case 'stagebegeleider':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><path stroke={stroke} fill="none" strokeWidth="2" d="M3 7l9-4 9 4-9 4-9-4z"/></svg>
+    case 'patient':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/><path stroke={stroke} fill="none" strokeWidth="2" d="M12 7v10M7 12h10"/></svg>
+    case 'overig':
+      return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/></svg>
     default:
       return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke={stroke} fill="none" strokeWidth="2"/></svg>
   }

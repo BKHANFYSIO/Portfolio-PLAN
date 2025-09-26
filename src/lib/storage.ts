@@ -29,7 +29,16 @@ export type Artifact = {
   kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
 }
 
-export type PerspectiveKey = 'zelfreflectie'|'peer'|'ouderejaars'|'docent'|'extern'
+// Perspectieven (slugs). UI toont bijbehorende labels.
+export type PerspectiveKey =
+  | 'zelfreflectie'
+  | 'docent'
+  | 'student-p'
+  | 'student-hf1'
+  | 'student-hf2-3'
+  | 'stagebegeleider'
+  | 'patient'
+  | 'overig'
 
 export type PortfolioPlan = {
   id: string;

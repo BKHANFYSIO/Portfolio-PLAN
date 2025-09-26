@@ -149,7 +149,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 <label style={{display:'inline-flex',gap:6,alignItems:'center'}}>
                   <input type="checkbox" checked={persp.length===0} onChange={()=> setPersp([])} /> geen perspectieven
                 </label>
-                {(['zelfreflectie','peer','ouderejaars','docent','extern'] as PerspectiveKey[]).map(p => (
+                {(['zelfreflectie','docent','student-p','student-hf1','student-hf2-3','stagebegeleider','patient','overig'] as PerspectiveKey[]).map(p => (
                   <label key={p} style={{display:'inline-flex',gap:6,alignItems:'center'}}>
                     <input type="checkbox" checked={persp.includes(p)} onChange={()=> setPersp(s=> s.includes(p) ? s.filter(x=>x!==p) : [...s,p]) } /> {p}
                   </label>
