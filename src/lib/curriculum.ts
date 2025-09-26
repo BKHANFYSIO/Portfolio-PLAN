@@ -28,8 +28,10 @@ export type TemplateArtifact = {
   cases: string[]; // names/ids
   knowledge: string[]; // names/ids
   vraak: { variatie:number; relevantie:number; authenticiteit:number; actualiteit:number; kwantiteit:number };
-  kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
+  kind?: 'document'|'toets'|'performance'|'certificaat'|'overig'|'kennistoets'|'vaardigheid'|'gesprek'; // backward compat voor oude exports
+  kinds?: Array<'document'|'toets'|'performance'|'certificaat'|'overig'|'kennistoets'|'vaardigheid'|'gesprek'>; // nieuwe multi-select
   note?: string; // korte toelichting voor in UI
+  courses?: string[]; // toepasbaar voor deze cursussen (namen)
 }
 
 const EVLS: EVL[] = [
@@ -273,19 +275,52 @@ export async function importTemplatesFromPublic(): Promise<TemplateArtifact[]>{
       const wb = XLSX.read(buf)
       const sheet = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json<any>(sheet)
+
+      const isChecked = (v:any)=>{
+        const t = String(v||'').toLowerCase().trim()
+        return t==='v' || t==='x' || t==='ja' || t==='true' || t==='1'
+      }
+
       for(const r of rows){
         const name = String(r['Naam']||r['name']||'').trim()
         if(!name) continue
-        const evl = String(r['EVL']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
+        // Scheidingsteken: ; of , — EVL mag ook 1,2 bevatten; normaliseer naar 1.2
+        const split = (val:any)=> String(val||'').split(/[;，]/).flatMap((s:string)=> s.split(';')).flatMap((s:string)=> s.split(',')).map((s:string)=>s.trim()).filter(Boolean)
+        const evlRaw = split((r as any)['EVL'])
+        const evl = evlRaw.map((code:string)=> code.replace(/^(\d+),(\d+)$/, '$1.$2'))
         const casesCol = (r as any)['Casussen'] ?? (r as any)['Thema’s'] ?? (r as any)["Thema's"] ?? (r as any)['Themas'] ?? (r as any)['Thema'] ?? ''
-        const cases = String(casesCol||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
-        const knowledge = String(r['Kennis']||'').split(',').map((s:string)=>s.trim()).filter(Boolean)
+        const cases = split(casesCol)
+        const knowledge = split((r as any)['Kennis'])
         const vraak = {
           variatie: Number(r['Variatie']||3), relevantie: Number(r['Relevantie']||3), authenticiteit: Number(r['Authenticiteit']||3), actualiteit: Number(r['Actualiteit']||3), kwantiteit: Number(r['Kwantiteit']||3)
         }
-        const kind = String(r['Soort']||'overig').toLowerCase() as any
+        // Soort bewijs: meerdere kolommen met vinkjes
+        const kindMap: Record<string,string> = {
+          'Certificaat':'certificaat',
+          'Schriftelijk product':'schriftelijk',
+          'Kennistoets':'kennistoets',
+          'Vaardigheidstest':'vaardigheid',
+          'Performance':'performance',
+          'Gesprek':'gesprek',
+          'Overig':'overig',
+          'Overig/anders':'overig'
+        }
+        const kinds: string[] = []
+        for(const [col,label] of Object.entries(kindMap)){
+          if(isChecked((r as any)[col])) kinds.push(label)
+        }
+        const kind = kinds[0] as any // backward compat
         const note = String((r as any)['Toelichting'] || (r as any)['Beschrijving'] || (r as any)['Omschrijving'] || '').trim() || undefined
-        out.push({ name, evl, cases, knowledge, vraak, kind, note })
+        // Portfoliokolommen: na een eventuele kolom 'Portfolio' staan cursusnamen
+        const courses: string[] = []
+        // heuristisch: verzamel alle kolommen die niet eerder gebruikt zijn en die 'v' hebben
+        const reserved = new Set(['Naam','name','EVL','Kennis','Variatie','Relevantie','Authenticiteit','Actualiteit','Kwantiteit','Soort','Soort Bewijs','Toelichting','Beschrijving','Omschrijving',...Object.keys(kindMap)])
+        for(const key of Object.keys(r)){
+          if(reserved.has(String(key))) continue
+          const val = (r as any)[key]
+          if(isChecked(val)) courses.push(String(key))
+        }
+        out.push({ name, evl, cases, knowledge, vraak, kind, kinds: kinds as any, note, courses })
       }
     }
     writeJson('pf-templates', out)

@@ -130,7 +130,16 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                     <span className="muted" style={{display:'block',fontSize:12,marginBottom:4}}>Kies sjabloon</span>
                     <select value={chosenTemplate} onChange={e=> setChosenTemplate(e.target.value)}>
                       <option value="">Kies sjabloon…</option>
-                      {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
+                      {templates
+                        .filter(t=> {
+                          // filter op cursus indien sjabloon beperkt is tot bepaalde courses
+                          if(Array.isArray((t as any).courses) && (t as any).courses.length>0){
+                            const courseName = course?.name || ''
+                            return (t as any).courses.includes(courseName)
+                          }
+                          return true
+                        })
+                        .map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
                     </select>
                   </label>
                   <div className="muted" style={{fontSize:12, marginTop:6}}>
