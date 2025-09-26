@@ -14,7 +14,10 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
 
   const initialMode = (localStorage.getItem('pf-add-mode') as 'wizard'|'full') || 'wizard'
   const [mode, setMode] = useState<'wizard'|'full'>(initialMode)
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0) // stap 0 = keuze sjabloon of vrije invoer
+  const TOTAL_STEPS = 6
+  const [startChoice, setStartChoice] = useState<'template'|'free'|''>(()=> (localStorage.getItem('pf-add-choice') as any) || '')
+  const [chosenTemplate, setChosenTemplate] = useState<string>('')
   const [name, setName] = useState('')
   const [week, setWeek] = useState<number|''>('')
   const [evlOutcomeIds, setEvlOutcomeIds] = useState<string[]>([])
@@ -23,6 +26,17 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const [vraak, setVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
   const [kind, setKind] = useState<string>('')
   const [persp, setPersp] = useState<PerspectiveKey[]>([])
+  function applyTemplateByName(name: string){
+    const t = templates.find(x=> x.name===name)
+    if(!t) return
+    setName(t.name)
+    setEvlOutcomeIds([...(t.evl||[])])
+    setCaseIds([...(t.cases||[])])
+    setKnowledgeIds([...(t.knowledge||[])])
+    setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+    if(t.kind){ setKind(t.kind) }
+  }
+
 
   const evlForCourse = useMemo(()=> {
     const overrides = (course?.evlOverrides)||{}
@@ -101,7 +115,36 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           <button className="file-label" onClick={()=>{ setMode('wizard'); localStorage.setItem('pf-add-mode','wizard') }} disabled={mode==='wizard'}>Stappen</button>
           <button className="file-label" onClick={()=>{ setMode('full'); localStorage.setItem('pf-add-mode','full') }} disabled={mode==='full'}>Formulier</button>
         </div>
-        {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step} van 5</div>}
+        {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step+1} van {TOTAL_STEPS}</div>}
+
+        {mode==='wizard' && step===0 && (
+          <div>
+            <h4>Startoptie</h4>
+            <div style={{display:'grid', gap:8}}>
+              <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
+                <input type="radio" checked={startChoice==='template'} onChange={()=>{ setStartChoice('template'); localStorage.setItem('pf-add-choice','template') }} /> Sjabloon gebruiken
+              </label>
+              {startChoice==='template' && (
+                <div style={{paddingLeft:22}}>
+                  <label style={{display:'block'}}>
+                    <span className="muted" style={{display:'block',fontSize:12,marginBottom:4}}>Kies sjabloon</span>
+                    <select value={chosenTemplate} onChange={e=> setChosenTemplate(e.target.value)}>
+                      <option value="">Kies sjabloon…</option>
+                      {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
+                    </select>
+                  </label>
+                  <div className="muted" style={{fontSize:12, marginTop:6}}>Het sjabloon vult velden alvast voor je in. Alles is later nog aan te passen.</div>
+                </div>
+              )}
+              <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
+                <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free'); localStorage.setItem('pf-add-choice','free') }} /> Vrije invoer
+              </label>
+              {startChoice==='free' && (
+                <div className="muted" style={{fontSize:12, paddingLeft:22}}>Je start met een leeg formulier en vult alles zelf in.</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {mode==='wizard' && step===1 && (
           <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
@@ -126,23 +169,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 <option value="overig">Overig</option>
               </select>
             </label>
-            {templates.length>0 && (
-              <label><span>Sjabloon</span>
-                <select onChange={e=>{
-                  const t = templates.find(x=> x.name===e.target.value)
-                  if(!t) return
-                  setName(t.name)
-                  setEvlOutcomeIds([...(t.evl||[])])
-                  setCaseIds([...(t.cases||[])])
-                  setKnowledgeIds([...(t.knowledge||[])])
-                  setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
-                  if(t.kind){ setKind(t.kind) }
-                }}>
-                  <option value="">Kies sjabloon…</option>
-                  {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
-                </select>
-              </label>
-            )}
+            {/* sjabloonselect is verplaatst naar stap 0 in wizard; in full-mode blijft hij beschikbaar */}
             <label style={{gridColumn:'1 / -1'}}>
               <span>Perspectieven (meerdere mogelijk)</span>
               <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
@@ -219,8 +246,15 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
 
         {mode==='wizard' ? (
           <div className="dialog-actions">
-            {step>1 ? <button onClick={()=>setStep(step-1)}>Terug</button> : <button onClick={onClose}>Annuleren</button>}
-            {step<5 ? <button onClick={()=>setStep(step+1)}>Volgende</button> : <button onClick={save}>Opslaan</button>}
+            {step>0 ? <button onClick={()=>setStep(step-1)}>Terug</button> : <button onClick={onClose}>Annuleren</button>}
+            {step<(TOTAL_STEPS-1) ? (
+              <button
+                onClick={()=>{ if(step===0 && startChoice==='template' && chosenTemplate){ applyTemplateByName(chosenTemplate) } setStep(step+1) }}
+                disabled={step===0 && (startChoice==='' || (startChoice==='template' && !chosenTemplate))}
+              >Volgende</button>
+            ) : (
+              <button onClick={save}>Opslaan</button>
+            )}
           </div>
         ) : (
           <>
