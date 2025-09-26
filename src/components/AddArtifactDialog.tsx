@@ -117,7 +117,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
         </div>
         {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step+1} van {TOTAL_STEPS}</div>}
 
-        {step===0 && (
+        {mode==='wizard' && step===0 && (
           <div>
             <h4>Startoptie</h4>
             <div style={{display:'grid', gap:8}}>
@@ -275,7 +275,8 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           </div>
         ) : (
           <>
-            {step===0 ? (
+            {/* In formulier-modus tonen we óók eerst alleen de startoptie */}
+            {mode==='full' && step===0 ? (
               <>
                 <div>
                   <h4>Startoptie</h4>
