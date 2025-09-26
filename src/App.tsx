@@ -41,6 +41,13 @@ function App() {
   const [form, setForm] = useState({ name: '', year: defaultYear, courseId: '', periodType: 'periode', periodPeriode: '1', periodSemester: '1', periodStartWeek: '', periodEndWeek: '' })
 
   const currentCurriculum = useMemo(()=> getCurriculumForYear(form.year), [form.year])
+  const selectedCourse = useMemo(()=> currentCurriculum.courses.find(c=>c.id===form.courseId) || currentCurriculum.courses[0], [currentCurriculum, form.courseId])
+  const computedTitle = useMemo(()=>{
+    const base = selectedCourse?.name || ''
+    const extra = (form.name||'').trim()
+    return extra ? `${base} - ${extra}` : base
+  }, [selectedCourse, form.name])
+  const isDuplicateTitle = useMemo(()=> plans.some(p=> (p.name||'').trim().toLowerCase() === computedTitle.trim().toLowerCase()), [plans, computedTitle])
 
   // Zorg dat courseId default gezet wordt op eerste beschikbare cursus in gekozen jaar
   useEffect(()=>{
@@ -96,14 +103,16 @@ function App() {
   function remove(id: string){ save(plans.filter(p=>p.id!==id)) }
 
   function create(){
-    if(!form.name.trim()) return alert('Naam is verplicht.');
-    const course = currentCurriculum.courses.find(c=>c.id===form.courseId) || currentCurriculum.courses[0];
+    const course = selectedCourse
+    const finalName = computedTitle.trim()
+    if(!finalName){ return alert('Titel is verplicht.') }
+    if(isDuplicateTitle){ return alert('Er bestaat al een portfolio plan met deze titel.') }
     let period: PortfolioPlan['period'];
     if(form.periodType==='periode') period = { type:'periode', value:Number(form.periodPeriode), label:`Periode ${form.periodPeriode}` };
     else if(form.periodType==='semester') period = { type:'semester', value:Number(form.periodSemester), label:`Semester ${form.periodSemester}` };
     else period = { type:'maatwerk', value:[Number(form.periodStartWeek), Number(form.periodEndWeek)], label:`Maatwerk weeks ${form.periodStartWeek}-${form.periodEndWeek}` };
     const now = Date.now()
-    const plan: PortfolioPlan = { id: generateId('plan'), name: form.name.trim(), year: Number(form.year), courseId: course.id, courseName: course.name, period, artifacts: [], createdAt: now, updatedAt: now, favorite: false };
+    const plan: PortfolioPlan = { id: generateId('plan'), name: finalName, year: Number(form.year), courseId: course.id, courseName: course.name, period, artifacts: [], createdAt: now, updatedAt: now, favorite: false };
     save([plan, ...plans]);
     setShowDialog(false);
     setForm({ ...form, name: '' });
@@ -212,9 +221,12 @@ function App() {
             <h3>Nieuw portfolio plan</h3>
             <div className="grid">
               <label>
-                <span>Naam</span>
-                <input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} />
+                <span>Titel (aanvulling, optioneel)</span>
+                <input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="bijv. eigen focus of groep" />
               </label>
+              <div className="muted" style={{gridColumn:'1 / -1', fontSize:12}}>
+                Voorgestelde titel: <strong>{computedTitle||'—'}</strong> {isDuplicateTitle && (<span style={{color:'#f29696', marginLeft:8}}>(bestaat al)</span>)}
+              </div>
               <label>
                 <span>Studiejaar</span>
                 <select value={form.year} onChange={e=>setForm({...form, year:Number(e.target.value)})}>
