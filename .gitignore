@@ -1,11 +1,16 @@
-﻿node_modules/
-dist/
+﻿# Node
+node_modules
+
+# Vercel
+.vercel
+
+# Editor
 .DS_Store
-*.local
-.vscode/
 *.log
-coverage/
-**/*.cache
-npm-debug.log*
-pnpm-lock.yaml
-yarn.lock
+
+# Office temp files
+~$*.xlsx
+~$*.xls
+
+# Build
+/dist
