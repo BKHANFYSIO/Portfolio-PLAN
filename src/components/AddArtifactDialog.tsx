@@ -112,8 +112,8 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
       <div className="dialog" onClick={e=>e.stopPropagation()}>
         <h3>Bewijsstuk toevoegen</h3>
         <div style={{display:'flex', gap:8, marginBottom:8}}>
-          <button className="file-label" onClick={()=>{ setMode('wizard'); localStorage.setItem('pf-add-mode','wizard') }} disabled={mode==='wizard'}>Stappen</button>
-          <button className="file-label" onClick={()=>{ setMode('full'); localStorage.setItem('pf-add-mode','full') }} disabled={mode==='full'}>Formulier</button>
+          <button className="file-label" onClick={()=>{ setMode('wizard'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','wizard') }} disabled={mode==='wizard'}>Stappen</button>
+          <button className="file-label" onClick={()=>{ setMode('full'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','full') }} disabled={mode==='full'}>Formulier</button>
         </div>
         {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step+1} van {TOTAL_STEPS}</div>}
 
@@ -275,6 +275,58 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           </div>
         ) : (
           <>
+            {step===0 ? (
+              <>
+                <div>
+                  <h4>Startoptie</h4>
+                  <div style={{display:'grid', gap:8}}>
+                    <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
+                      <input type="radio" checked={startChoice==='template'} onChange={()=>{ setStartChoice('template') }} /> Sjabloon gebruiken
+                    </label>
+                    {startChoice==='template' && (
+                      <div style={{paddingLeft:22}}>
+                        <label style={{display:'block'}}>
+                          <span className="muted" style={{display:'block',fontSize:12,marginBottom:4}}>Kies sjabloon</span>
+                          <select value={chosenTemplate} onChange={e=> setChosenTemplate(e.target.value)}>
+                            <option value="">Kies sjabloon…</option>
+                            {(() => {
+                              const normalize = (s:string)=> String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'')
+                              const cn = normalize(course?.name||'')
+                              const templs = templates.filter(t => {
+                                const list = (t as any).courses as string[] | undefined
+                                if(Array.isArray(list) && list.length>0){
+                                  const ok = list.some(x => normalize(x)===cn)
+                                  return ok
+                                }
+                                return true
+                              })
+                              const final = templs.length>0 ? templs : templates
+                              return final.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)
+                            })()}
+                          </select>
+                        </label>
+                        <div className="muted" style={{fontSize:12, marginTop:6}}>
+                          {(templates.find(x=>x.name===chosenTemplate)?.note) || 'Het sjabloon vult velden alvast voor je in. Alles is later nog aan te passen.'}
+                        </div>
+                      </div>
+                    )}
+                    <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
+                      <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free') }} /> Vrije invoer
+                    </label>
+                    {startChoice==='free' && (
+                      <div className="muted" style={{fontSize:12, paddingLeft:22}}>
+                        Je hebt gekozen voor volledige vrijheid. Je bepaalt zelf de naam, het type bewijs, de leeruitkomsten en de VRAAK-criteria. Gebruik deze optie als je een uniek datapunt wilt toevoegen dat niet in een sjabloon past.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="dialog-actions">
+                  <button className="file-label" onClick={onClose}>Annuleren</button>
+                  <button className="btn" onClick={()=>{ if(startChoice==='template' && chosenTemplate){ applyTemplateByName(chosenTemplate) } setStep(1) }} disabled={startChoice==='' || (startChoice==='template' && !chosenTemplate)}>Volgende</button>
+                </div>
+              </>
+            ) : (
+            <>
             <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
               <label><span>Naam</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="bijv. e-learning certificaat"/></label>
               <label><span>Week</span>
@@ -377,6 +429,8 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
               <button className="file-label" onClick={onClose}>Annuleren</button>
               <button className="btn" onClick={save}>Opslaan</button>
             </div>
+            </>
+            )}
           </>
         )}
       </div>

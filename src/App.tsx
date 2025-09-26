@@ -221,8 +221,11 @@ function App() {
             <h3>Nieuw portfolio plan</h3>
             <div className="grid">
               <label>
-                <span>Titel (aanvulling, optioneel)</span>
-                <input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="bijv. eigen focus of groep" />
+                <span>Titel</span>
+                <div style={{display:'grid', gridTemplateColumns:'max-content 1fr', alignItems:'center', gap:6}}>
+                  <span className="file-label" style={{padding:'6px 8px', userSelect:'none'}}>{(selectedCourse?.name)||''}</span>
+                  <input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="aanvulling (optioneel)" />
+                </div>
               </label>
               <div className="muted" style={{gridColumn:'1 / -1', fontSize:12}}>
                 Voorgestelde titel: <strong>{computedTitle||'—'}</strong> {isDuplicateTitle && (<span style={{color:'#f29696', marginLeft:8}}>(bestaat al)</span>)}
