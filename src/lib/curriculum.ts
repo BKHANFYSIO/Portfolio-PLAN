@@ -326,7 +326,7 @@ export async function importCurriculumFromPublic(): Promise<Record<number,{evl:E
         if(hasCourseCol && hasSignals){ headerRowIdx = i; break }
       }
       const header = (matrixRows[headerRowIdx]||[]).map(v=> String(v||'').trim())
-      const normalize = (s:string)=> s.toLowerCase().replace(/\s+/g,' ').trim()
+      // (unused) const normalize = (s:string)=> s.toLowerCase().replace(/\s+/g,' ').trim()
       const isChecked = (v:any)=>{
         const t = String(v||'').toLowerCase().trim()
         return t==='v' || t==='x' || t==='ja' || t==='true' || t==='1'
@@ -353,22 +353,6 @@ export async function importCurriculumFromPublic(): Promise<Record<number,{evl:E
         .filter(x=> x.idx!==casusToggleIdx)
         .filter(x=> /\d/.test(x.h)) // kolommen genummerd (casus/thema1..n)
         .map(x=> x.idx)
-
-      // Kennis domeinen: primair alle kolommen na de kennis-toggle die geen outcome zijn en niet casus/evl
-      let knowledgeIdxs = header
-        .map((h,idx)=> ({h,idx}))
-        .filter(x=> kennisToggleIdx>=0 && x.idx>kennisToggleIdx)
-        .filter(x=> !isOutcomeCol(x.h) && !/evl/i.test(x.h) && !/casus|thema/i.test(x.h) && !/^(portfolio|cursus|course|jaar|year)$/i.test(x.h))
-        .map(x=> x.idx)
-      // Fallback: als geen kennis-toggle of niets gevonden, neem alle kolommen rechts van de laatste outcome-kolom
-      if(knowledgeIdxs.length===0){
-        const lastOutcomeIdx = outcomeColMeta.reduce((m,c)=> Math.max(m, c.idx), -1)
-        knowledgeIdxs = header
-          .map((h,idx)=> ({h,idx}))
-          .filter(x=> x.idx>lastOutcomeIdx)
-          .filter(x=> !/evl/i.test(x.h) && !/casus|thema/i.test(x.h) && !isOutcomeCol(x.h) && !/^(portfolio|cursus|course|jaar|year)$/i.test(x.h))
-          .map(x=> x.idx)
-      }
 
       // Start met default EVL‑namen; outcomes vullen we op basis van kolomtitels
       const evlMap: Record<EVL['id'], { id: EVL['id']; name: string; outcomes: Outcome[] }> = {
@@ -412,6 +396,22 @@ export async function importCurriculumFromPublic(): Promise<Record<number,{evl:E
           const id = `${m[1]}.${m[2]}`
           outcomeColMeta.push({ idx:i, id, name:title, evlId })
         }
+      }
+
+      // Kennis domeinen: primair alle kolommen na de kennis-toggle die geen outcome zijn en niet casus/evl
+      let knowledgeIdxs = header
+        .map((h,idx)=> ({h,idx}))
+        .filter(x=> kennisToggleIdx>=0 && x.idx>kennisToggleIdx)
+        .filter(x=> !isOutcomeCol(x.h) && !/evl/i.test(x.h) && !/casus|thema/i.test(x.h) && !/^(portfolio|cursus|course|jaar|year)$/i.test(x.h))
+        .map(x=> x.idx)
+      // Fallback: als geen kennis-toggle of niets gevonden, neem alle kolommen rechts van de laatste outcome-kolom
+      if(knowledgeIdxs.length===0){
+        const lastOutcomeIdx = outcomeColMeta.reduce((m,c)=> Math.max(m, c.idx), -1)
+        knowledgeIdxs = header
+          .map((h,idx)=> ({h,idx}))
+          .filter(x=> x.idx>lastOutcomeIdx)
+          .filter(x=> !/evl/i.test(x.h) && !/casus|thema/i.test(x.h) && !isOutcomeCol(x.h) && !/^(portfolio|cursus|course|jaar|year)$/i.test(x.h))
+          .map(x=> x.idx)
       }
       // Voeg alle gevonden outcomes toe aan EVL-lijst (naam = kolomtitel)
       for(const meta of outcomeColMeta){
