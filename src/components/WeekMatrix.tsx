@@ -494,7 +494,47 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 <div className="wm-cells">
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.includes(c.id))
-                    return <div key={w} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `${c.name} — week ${w}`)}>{list.length}</button>}</div>
+                    return (
+                      <div key={w} className="wm-cell">
+                        {list.length>0 ? (
+                          <div className="wm-artlist">
+                            {list.map((a:any)=> (
+                              <button
+                                key={a.id}
+                                className="wm-art"
+                                title={a.name}
+                                onMouseEnter={(e)=>{
+                                  const btn = e.currentTarget
+                                  const cell = btn.closest('.wm-cell') as HTMLElement | null
+                                  if(!cell) return
+                                  const ph = document.createElement('div')
+                                  ph.className = 'wm-art-placeholder'
+                                  ph.style.height = `${btn.offsetHeight}px`
+                                  btn.after(ph)
+                                  const btnRect = btn.getBoundingClientRect()
+                                  const cellRect = cell.getBoundingClientRect()
+                                  const topOffset = btnRect.top - cellRect.top
+                                  btn.style.top = `${Math.max(4, topOffset)}px`
+                                  btn.classList.add('wm-art--floating')
+                                }}
+                                onMouseLeave={(e)=>{
+                                  const btn = e.currentTarget
+                                  btn.classList.remove('wm-art--floating')
+                                  btn.style.top = ''
+                                  const next = btn.nextSibling as HTMLElement | null
+                                  if(next && (next as any).classList && next.classList.contains('wm-art-placeholder')){
+                                    next.remove()
+                                  }
+                                }}
+                                onClick={()=> openPreview([a] as any, a.name)}
+                              >
+                                <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
                   })}
                 </div>
                 <div className="wm-vraak sticky-right offset-r2">
@@ -598,7 +638,24 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 <div className="wm-cells">
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.knowledgeIds.includes(k.id))
-                    return <div key={w} className="wm-cell">{list.length>0 && <div className="wm-chip">{list.length}</div>}</div>
+                    return (
+                      <div key={w} className="wm-cell">
+                        {list.length>0 ? (
+                          <div className="wm-artlist">
+                            {list.map((a:any)=> (
+                              <button
+                                key={a.id}
+                                className="wm-art"
+                                title={a.name}
+                                onClick={()=> openPreview([a] as any, a.name)}
+                              >
+                                <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
                   })}
                 </div>
                 <div className="wm-vraak sticky-right offset-r2">
