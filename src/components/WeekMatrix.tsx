@@ -528,6 +528,13 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                 }}
                                 onClick={()=> openPreview([a] as any, a.name)}
                               >
+                                <div className="icons-row">
+                                  <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
+                                  <span className="sep" />
+                                  {Array.isArray(a.perspectives) && a.perspectives.map((p:string)=> (
+                                    <span key={p} title={p}><PerspectiveIcon p={p as any} /></span>
+                                  ))}
+                                </div>
                                 <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
                             ))}
@@ -649,6 +656,13 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                 title={a.name}
                                 onClick={()=> openPreview([a] as any, a.name)}
                               >
+                                <div className="icons-row">
+                                  <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
+                                  <span className="sep" />
+                                  {Array.isArray(a.perspectives) && a.perspectives.map((p:string)=> (
+                                    <span key={p} title={p}><PerspectiveIcon p={p as any} /></span>
+                                  ))}
+                                </div>
                                 <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
                             ))}
