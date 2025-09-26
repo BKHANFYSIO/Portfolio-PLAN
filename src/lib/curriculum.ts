@@ -261,12 +261,13 @@ export async function importYearsFromPublic(): Promise<Array<{id:string;year:num
 // Templates import (sjablonen)
 export async function importTemplatesFromPublic(): Promise<TemplateArtifact[]>{
   try{
-    const idxResp = await fetch('/sjablonen-index.json')
-    if(!idxResp.ok) return readJson('pf-templates', [] as TemplateArtifact[])
-    const idx = await idxResp.json() as string[]
+    // Probeer submap-index eerst, val terug op oude root index
+    const tryLoad = async (url:string) => { try{ const r=await fetch(url); if(!r.ok) return null; const j=await r.json() as string[]; return Array.isArray(j)?j:null }catch{ return null } }
+    const idx = (await tryLoad('/Sjablonen/index.json')) ?? (await tryLoad('/sjablonen-index.json'))
+    if(!idx) return readJson('pf-templates', [] as TemplateArtifact[])
     const out: TemplateArtifact[] = []
     for(const file of idx){
-      const res = await fetch(`/${encodeURIComponent(file)}`)
+      const res = await fetch(encodeURI(`/${file}`))
       const buf = await res.arrayBuffer()
       const wb = XLSX.read(buf)
       const sheet = wb.Sheets[wb.SheetNames[0]]
