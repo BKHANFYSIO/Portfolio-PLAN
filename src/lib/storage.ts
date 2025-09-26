@@ -1,6 +1,7 @@
 export const LS_KEYS = {
   plans: 'pf-portfolio-plans',
   curriculum: 'pf-curriculum',
+  curriculumByYear: 'pf-curriculum-by-year',
   years: 'pf-year-planners',
   ui: 'pf-ui-preferences',
   help: 'pf-help-seen'

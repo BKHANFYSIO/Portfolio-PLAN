@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PortfolioPlan, Artifact } from '../lib/storage'
-import { getCurriculum, getYears } from '../lib/curriculum'
+import { getCurriculumForYear, getYears } from '../lib/curriculum'
 import './weekMatrix.css'
 import { KindIcon, PerspectiveIcon } from './icons'
 
 type Props = { plan: PortfolioPlan; onEdit?: (a: Artifact)=>void }
 
 export default function WeekMatrix({ plan, onEdit }: Props){
-  const { evl, courses } = getCurriculum()
+  const { evl, courses } = getCurriculumForYear(plan.year)
   const years = getYears()
   const course = courses.find(c=>c.id===plan.courseId)
-  const evlExcluded = course?.evlOverrides?.EVL1 || []
-  const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl, course])
+  const evlForCourse = useMemo(()=> {
+    const overrides = (course?.evlOverrides) || {}
+    return evl.map(b => {
+      const excluded = (overrides as any)[b.id] || []
+      return ({ ...b, outcomes: b.outcomes.filter(o=> !excluded.includes(o.id)) })
+    })
+  }, [evl, course])
   const weeks = useMemo(()=>{
     const year = years.find(y=>y.year===plan.year)
     const all = (year?.weeks || [])
@@ -438,6 +443,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
           ))}
 
           {/* Casussen sectie */}
+          {(course?.cases?.length||0) > 0 && (
           <div>
               <div className="wm-evlhead" onClick={()=>setOpenCasus(v=>!v)}>
               <div className="wm-rowhead evl"><span className={openCasus ? 'caret down':'caret'} /> Casussen / Thema’s</div>
@@ -481,7 +487,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   })()
                 }
               </div>
-            </div>
+          </div>
             {openCasus && course?.cases.map(c => (
               <div key={c.id} className="wm-row">
                 <div className="wm-rowhead">{c.name}</div>
@@ -538,8 +544,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               </div>
             ))}
           </div>
+          )}
 
           {/* Kennis sectie */}
+          {(course?.knowledgeDomains?.length||0) > 0 && (
           <div>
             <div className="wm-evlhead" onClick={()=>setOpenKennis(v=>!v)}>
               <div className="wm-rowhead evl"><span className={openKennis ? 'caret down':'caret'} /> Kennis</div>
@@ -640,6 +648,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
       <div className="wm-mask-left" />

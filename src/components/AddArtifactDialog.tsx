@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { generateId, LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { Artifact, PortfolioPlan } from '../lib/storage'
 import type { PerspectiveKey } from '../lib/storage'
-import { getCurriculum, getYears } from '../lib/curriculum'
+import { getCurriculumForYear, getYears } from '../lib/curriculum'
 
 type Props = { plan: PortfolioPlan; onClose: ()=>void; onSaved: (a:Artifact)=>void }
 
 export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
-  const { evl, courses } = getCurriculum()
-  const course = courses.find(c=>c.id===plan.courseId)!
+  const { evl, courses } = getCurriculumForYear(plan.year)
+  const course = courses.find(c=>c.id===plan.courseId)
   const yearWeeks = getYears().find(y=>y.year===plan.year)?.weeks || []
   const templates = readJson<any[]>('pf-templates', [])
 
@@ -24,8 +24,13 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const [kind, setKind] = useState<string>('')
   const [persp, setPersp] = useState<PerspectiveKey[]>([])
 
-  const evlExcluded = course?.evlOverrides?.EVL1 || []
-  const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl])
+  const evlForCourse = useMemo(()=> {
+    const overrides = (course?.evlOverrides)||{}
+    return evl.map(b => {
+      const excluded = (overrides as any)[b.id] || []
+      return ({ ...b, outcomes: b.outcomes.filter(o=> !excluded.includes(o.id)) })
+    })
+  }, [evl, course])
 
   function visibleWeekNumbers(){
     const all = yearWeeks

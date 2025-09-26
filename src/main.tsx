@@ -3,23 +3,34 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
-import { ensureSeed, importYearsFromPublic, importTemplatesFromPublic } from './lib/curriculum'
+import { ensureSeed, importYearsFromPublic, importTemplatesFromPublic, importCurriculumFromPublic } from './lib/curriculum'
 import PlanDetail from './pages/PlanDetail'
 import Admin from './pages/Admin'
+import { applyTheme } from './lib/theme'
 
-ensureSeed()
-// Probeer jaarplanningen uit public te importeren (optioneel)
-importYearsFromPublic().catch(()=>{ /* ignore */ })
-importTemplatesFromPublic().catch(()=>{ /* ignore */ })
+async function bootstrap(){
+  ensureSeed()
+  // Importeer data uit public en wacht af vóór eerste render, zodat dropdowns direct juiste data tonen
+  try{
+    await importYearsFromPublic().catch(()=>{})
+    await importCurriculumFromPublic().catch(()=>{})
+    await importTemplatesFromPublic().catch(()=>{})
+  }catch{}
 
-const router = createBrowserRouter([
-  { path: '/', element: <App /> },
-  { path: '/plan/:id', element: <PlanDetail /> },
-  { path: '/admin', element: <Admin /> },
-])
+  // Zorg dat de gekozen thema-instelling (light/dark/system) direct geldt bij initial load
+  applyTheme()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
-)
+  const router = createBrowserRouter([
+    { path: '/', element: <App /> },
+    { path: '/plan/:id', element: <PlanDetail /> },
+    { path: '/admin', element: <Admin /> },
+  ])
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <RouterProvider router={router} />
+    </StrictMode>,
+  )
+}
+
+bootstrap()

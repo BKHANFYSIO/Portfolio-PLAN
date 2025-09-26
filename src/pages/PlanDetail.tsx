@@ -10,7 +10,7 @@ import WeekMatrix from '../components/WeekMatrix'
 import { getYears } from '../lib/curriculum'
 import { KindIcon, PerspectiveIcon } from '../components/icons'
 import type { PerspectiveKey } from '../lib/storage'
-import { getCurriculum } from '../lib/curriculum'
+import { getCurriculumForYear } from '../lib/curriculum'
 
 export default function PlanDetail(){
   const { id } = useParams()
@@ -27,7 +27,7 @@ export default function PlanDetail(){
   const [editArtifactName, setEditArtifactName] = useState('')
   const [editArtifactWeek, setEditArtifactWeek] = useState<number>(1 as any)
   const [editArtifactKind, setEditArtifactKind] = useState<string>('')
-  const { evl, courses } = getCurriculum()
+  const { evl, courses } = getCurriculumForYear(plan.year)
   const course = useMemo(()=> courses.find(c=>c.id===plan.courseId), [courses, plan.courseId])
   const evlExcluded = course?.evlOverrides?.EVL1 || []
   const evlForCourse = useMemo(()=> evl.map(b => b.id==='EVL1' ? ({...b, outcomes: b.outcomes.filter(o=>!evlExcluded.includes(o.id))}) : b), [evl])

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { LS_KEYS, readJson, writeJson, generateId } from './lib/storage'
 import type { PortfolioPlan } from './lib/storage'
-import { ensureSeed, getCurriculum, getYears } from './lib/curriculum'
+import { ensureSeed, getCurriculumForYear, getYears } from './lib/curriculum'
 import { Link } from 'react-router-dom'
 import { applyTheme, getThemeSetting, setThemeSetting } from './lib/theme'
 import BackupDialog from './components/BackupDialog'
@@ -11,9 +11,52 @@ import RestoreDialog from './components/RestoreDialog'
 function App() {
   const [plans, setPlans] = useState<PortfolioPlan[]>([])
   const years = useMemo(()=>getYears(), [])
-  const curriculum = useMemo(()=>getCurriculum(), [])
+  // getCurriculum blijft als fallback via getCurriculumForYear gebruikt; geen directe referentie hier nodig
   const [showDialog, setShowDialog] = useState(false)
-  const [form, setForm] = useState({ name: '', year: years[0]?.year ?? 2025, courseId: curriculum.courses[0]?.id ?? '', periodType: 'periode', periodPeriode: '1', periodSemester: '1', periodStartWeek: '', periodEndWeek: '' })
+
+  function formatStudyYearLabel(startYear: number, mode: 'short'|'long' = 'short'){
+    const endYear = startYear + 1
+    if(mode==='long') return `${startYear}-${endYear}`
+    const s1 = String(startYear).slice(-2)
+    const s2 = String(endYear).slice(-2)
+    return `${s1}-${s2}`
+  }
+
+  function getDefaultStudyStartYear(): number{
+    const now = new Date()
+    const cutoff = new Date(now.getFullYear(), 7, 14) // 14 aug (maandindex 7)
+    return (now < cutoff) ? (now.getFullYear()-1) : now.getFullYear()
+  }
+
+  const defaultYear = useMemo(()=>{
+    const desired = getDefaultStudyStartYear()
+    const available = years.map(y=>y.year)
+    if(available.includes(desired)) return desired
+    const sorted = [...available].sort((a,b)=> a-b)
+    if(sorted.length===0) return 2025
+    const ge = sorted.find(y=> y>=desired)
+    return ge!=null ? ge : sorted[sorted.length-1]
+  }, [years])
+
+  const [form, setForm] = useState({ name: '', year: defaultYear, courseId: '', periodType: 'periode', periodPeriode: '1', periodSemester: '1', periodStartWeek: '', periodEndWeek: '' })
+
+  const currentCurriculum = useMemo(()=> getCurriculumForYear(form.year), [form.year])
+
+  // Zorg dat courseId default gezet wordt op eerste beschikbare cursus in gekozen jaar
+  useEffect(()=>{
+    const firstId = currentCurriculum.courses[0]?.id || ''
+    if(form.courseId!==firstId){ setForm(prev=> ({ ...prev, courseId: firstId })) }
+  }, [currentCurriculum])
+
+  // Debug: toon in dev de beschikbare cursussen voor geselecteerd jaar
+  useEffect(()=>{
+    try{
+      if((import.meta as any).env?.DEV){
+        // eslint-disable-next-line no-console
+        console.log('[ui] year', form.year, 'courses', currentCurriculum.courses.map(c=>c.name))
+      }
+    }catch{}
+  }, [form.year, currentCurriculum])
   const [showBackup, setShowBackup] = useState(false)
   const [showRestore, setShowRestore] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -54,7 +97,7 @@ function App() {
 
   function create(){
     if(!form.name.trim()) return alert('Naam is verplicht.');
-    const course = curriculum.courses.find(c=>c.id===form.courseId) || curriculum.courses[0];
+    const course = currentCurriculum.courses.find(c=>c.id===form.courseId) || currentCurriculum.courses[0];
     let period: PortfolioPlan['period'];
     if(form.periodType==='periode') period = { type:'periode', value:Number(form.periodPeriode), label:`Periode ${form.periodPeriode}` };
     else if(form.periodType==='semester') period = { type:'semester', value:Number(form.periodSemester), label:`Semester ${form.periodSemester}` };
@@ -175,13 +218,13 @@ function App() {
               <label>
                 <span>Studiejaar</span>
                 <select value={form.year} onChange={e=>setForm({...form, year:Number(e.target.value)})}>
-                  {years.map(y=> <option key={y.id} value={y.year}>{y.year}</option>)}
+                  {years.map(y=> <option key={y.id} value={y.year}>{formatStudyYearLabel(y.year)}</option>)}
                 </select>
               </label>
               <label>
                 <span>Cursus</span>
                 <select value={form.courseId} onChange={e=>setForm({...form, courseId:e.target.value})}>
-                  {curriculum.courses.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {currentCurriculum.courses.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
             </div>
