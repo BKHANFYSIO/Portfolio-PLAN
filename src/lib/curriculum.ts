@@ -29,6 +29,7 @@ export type TemplateArtifact = {
   knowledge: string[]; // names/ids
   vraak: { variatie:number; relevantie:number; authenticiteit:number; actualiteit:number; kwantiteit:number };
   kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
+  note?: string; // korte toelichting voor in UI
 }
 
 const EVLS: EVL[] = [
@@ -283,7 +284,8 @@ export async function importTemplatesFromPublic(): Promise<TemplateArtifact[]>{
           variatie: Number(r['Variatie']||3), relevantie: Number(r['Relevantie']||3), authenticiteit: Number(r['Authenticiteit']||3), actualiteit: Number(r['Actualiteit']||3), kwantiteit: Number(r['Kwantiteit']||3)
         }
         const kind = String(r['Soort']||'overig').toLowerCase() as any
-        out.push({ name, evl, cases, knowledge, vraak, kind })
+        const note = String((r as any)['Toelichting'] || (r as any)['Beschrijving'] || (r as any)['Omschrijving'] || '').trim() || undefined
+        out.push({ name, evl, cases, knowledge, vraak, kind, note })
       }
     }
     writeJson('pf-templates', out)

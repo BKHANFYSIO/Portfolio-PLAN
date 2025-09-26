@@ -117,7 +117,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
         </div>
         {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step+1} van {TOTAL_STEPS}</div>}
 
-        {mode==='wizard' && step===0 && (
+        {step===0 && (
           <div>
             <h4>Startoptie</h4>
             <div style={{display:'grid', gap:8}}>
@@ -133,14 +133,18 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                       {templates.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
                     </select>
                   </label>
-                  <div className="muted" style={{fontSize:12, marginTop:6}}>Het sjabloon vult velden alvast voor je in. Alles is later nog aan te passen.</div>
+                  <div className="muted" style={{fontSize:12, marginTop:6}}>
+                    {(templates.find(x=>x.name===chosenTemplate)?.note) || 'Het sjabloon vult velden alvast voor je in. Alles is later nog aan te passen.'}
+                  </div>
                 </div>
               )}
               <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
                 <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free'); localStorage.setItem('pf-add-choice','free') }} /> Vrije invoer
               </label>
               {startChoice==='free' && (
-                <div className="muted" style={{fontSize:12, paddingLeft:22}}>Je start met een leeg formulier en vult alles zelf in.</div>
+                <div className="muted" style={{fontSize:12, paddingLeft:22}}>
+                  Je hebt gekozen voor volledige vrijheid. Je bepaalt zelf de naam, het type bewijs, de leeruitkomsten en de VRAAK-criteria. Gebruik deze optie als je een uniek datapunt wilt toevoegen dat niet in een sjabloon past.
+                </div>
               )}
             </div>
           </div>
@@ -169,7 +173,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
                 <option value="overig">Overig</option>
               </select>
             </label>
-            {/* sjabloonselect is verplaatst naar stap 0 in wizard; in full-mode blijft hij beschikbaar */}
+            {/* sjabloonselect is verplaatst naar stap 0; in full-mode blijft hij beschikbaar */}
             <label style={{gridColumn:'1 / -1'}}>
               <span>Perspectieven (meerdere mogelijk)</span>
               <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
