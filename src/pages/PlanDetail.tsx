@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams, useLocation } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { LS_KEYS, readJson, writeJson } from '../lib/storage'
@@ -14,7 +14,6 @@ import { getCurriculumForYear } from '../lib/curriculum'
 
 export default function PlanDetail(){
   const { id } = useParams()
-  const loc = useLocation()
   const plans = readJson(LS_KEYS.plans, [] as any[])
   const plan = plans.find(p=>p.id===id)
   // verwijderde curriculum/year reads (niet nodig op deze pagina)
