@@ -181,7 +181,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
           <div>
             <h4>Casussen / Thema’s</h4>
             <div className="luk">
-              {course.cases.map(c=> (
+              {(course?.cases||[]).map(c=> (
                 <label key={c.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
                   <input type="checkbox" checked={caseIds.includes(c.id)} onChange={()=>toggle(caseIds,c.id,setCaseIds)} /> {c.name}
                 </label>
@@ -189,7 +189,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
             </div>
             <h4>Kennisdomeinen</h4>
             <div className="luk">
-              {course.knowledgeDomains.map(k=> (
+              {(course?.knowledgeDomains||[]).map(k=> (
                 <label key={k.id} style={{display:'inline-flex',gap:6,marginRight:12}}>
                   <input type="checkbox" checked={knowledgeIds.includes(k.id)} onChange={()=>toggle(knowledgeIds,k.id,setKnowledgeIds)} /> {k.name}
                 </label>
