@@ -5,6 +5,7 @@
 .center{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; height:100%; display:flex; flex-direction:column; min-height:0; overflow:hidden }
 .matrix-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin: 4px 0 6px }
 .icon-btn{ background:var(--surface2); border:1px solid var(--line-strong); color:var(--text); padding:6px 8px; border-radius:8px; cursor:pointer }
+.icon-btn.primary{ background: var(--primary); color:#fff; border-color: transparent }
 .actions-desktop{ display:flex; gap:8px }
 .actions-mobile{ display:none }
 .evl-title{ font-weight:600; margin-top:6px }
@@ -20,7 +21,7 @@
 .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:50 }
 .modal{ background:var(--surface); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:16px; min-width:320px; max-height:80vh; overflow:auto }
 .modal{ display:flex; flex-direction:column }
-.modal-header{ position:sticky; top:0; background:var(--surface); z-index:2; padding-bottom:8px; margin:-16px -16px 8px -16px; padding:12px 16px; border-bottom:1px solid var(--line-strong) }
+.modal-header{ position:sticky; top:0; background:var(--surface); z-index:2; padding-bottom:8px; margin:-16px -16px 8px -16px; padding:16px; border-bottom:1px solid var(--line-strong) }
 .modal-body{ overflow:auto }
 .modal-footer{ position:sticky; bottom:0; background:var(--surface); z-index:2; padding-top:8px; margin:8px -16px -16px -16px; padding:12px 16px; border-top:1px solid var(--line-strong); text-align:right }
 .menu-list .btn{ display:flex; align-items:center; justify-content:flex-start; gap:8px }

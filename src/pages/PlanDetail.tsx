@@ -350,7 +350,7 @@ export default function PlanDetail(){
           <div className="muted">{plan.year} · {plan.courseName} · {localPeriod?.label}</div>
         </div>
         <div className="actions">
-          <button className="icon-btn actions-mobile" onClick={()=> setShowMobileMenu(true)} aria-label="Menu">
+          <button className="icon-btn primary actions-mobile" onClick={()=> setShowMobileMenu(true)} aria-label="Menu">
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <div className="actions-desktop">
@@ -389,7 +389,7 @@ export default function PlanDetail(){
         <main className="center" ref={centerRef as any}>
           <div className="matrix-header">
             <h3>Matrix (LUK x weken)</h3>
-            <button className="icon-btn" onClick={toggleFullscreen} title={isFullscreen? 'Sluit volledig scherm':'Volledig scherm'}>
+            <button className="icon-btn primary" onClick={toggleFullscreen} title={isFullscreen? 'Sluit volledig scherm':'Volledig scherm'}>
               <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/>
               </svg>
