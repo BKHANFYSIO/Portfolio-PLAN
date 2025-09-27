@@ -74,6 +74,16 @@ fieldset{ border:1px solid rgba(255,255,255,.12); border-radius:10px; margin-top
   }
 }
 
+/* Mobiel layout tweaks */
+@media (max-width: 900px){
+  .header{ flex-direction:column; align-items:flex-start; gap:10px }
+  .header .actions{ width:100%; display:grid; grid-template-columns: 1fr 1fr; gap:8px }
+  .header .actions button{ width:100% }
+  .header .actions .btn-weak{ text-align:center }
+  .list-head{ display:grid; gap:8px }
+  .sort-controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+}
+
 .card {
   padding: 2em;
 }

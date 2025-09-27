@@ -162,9 +162,9 @@ function App() {
       </header>
 
       <section className="list">
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div className="list-head">
           <h2 style={{margin:0}}>Mijn portfolio plannen</h2>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <div className="sort-controls">
             <label className="muted" style={{fontSize:12}}>Sorteer op</label>
             <select value={uiPrefs.sortBy} onChange={e=> savePrefs({ ...uiPrefs, sortBy: e.target.value as UiPrefs['sortBy'] })} className="file-label">
               <option value="updated">Laatst bewerkt</option>
