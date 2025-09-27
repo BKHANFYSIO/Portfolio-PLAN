@@ -12,6 +12,8 @@ body{ background:linear-gradient(180deg,var(--bg), var(--bg2) 60%, var(--bg)); c
 .actions{ display:flex; gap:8px; }
 button{ background:var(--primary); border:none; color:white; padding:8px 12px; border-radius:10px; cursor:pointer }
 .file-label{ background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.2); padding:8px 12px; border-radius:10px; cursor:pointer }
+.btn-weak{ background:rgba(79,124,255,.16); color:var(--text); border:1px solid rgba(79,124,255,.28); padding:8px 12px; border-radius:10px; cursor:pointer }
+.btn-weak:hover{ background:rgba(79,124,255,.24) }
 .file-label input{ display:none }
 .list{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; margin-top:16px; padding:16px }
 .list h2{ margin-top:6px }
@@ -20,7 +22,9 @@ button{ background:var(--primary); border:none; color:white; padding:8px 12px; b
 .meta{ display:flex; flex-direction:column }
 .title{ font-weight:600 }
 .sub{ color:var(--muted); font-size:12px }
-.row-actions{ display:flex; gap:8px }
+.row-actions{ display:flex; gap:8px; flex-wrap:wrap }
+.fav-btn{ background:transparent; border:1px solid rgba(255,255,255,.25); color:#ffd66b; padding:6px 10px; border-radius:10px; min-width:44px }
+.fav-btn.on{ background:rgba(255,214,107,.15); border-color: rgba(255,214,107,.45) }
 .danger{ background:#ff5d6c }
 
 /* Buttons with icons */

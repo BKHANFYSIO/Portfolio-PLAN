@@ -156,8 +156,8 @@ function App() {
         </div>
         <div className="actions">
           <button onClick={()=>setShowDialog(true)}>Nieuw portfolio plan</button>
-          <button className="file-label" onClick={()=>setShowSettings(true)}>Instellingen</button>
-          <button className="file-label" onClick={()=>setShowHelp(true)}>Uitleg</button>
+          <button className="btn-weak" onClick={()=>setShowSettings(true)}>Instellingen</button>
+          <button className="btn-weak" onClick={()=>setShowHelp(true)}>Uitleg</button>
         </div>
       </header>
 
@@ -189,8 +189,8 @@ function App() {
                   <div className="sub">{p.year} · {p.courseName} · {p.period.label} · aangemaakt {new Date(p.createdAt).toLocaleDateString()} · bewerkt {new Date(p.updatedAt).toLocaleDateString()}</div>
                 </div>
                 <div className="row-actions">
-                  <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
-                  <button onClick={()=>toggleFavorite(p.id)}>{p.favorite ? '★' : '☆'}</button>
+                  <Link className="btn" to={`/plan/${p.id}`}>Bewerken</Link>
+                  <button className={`fav-btn${p.favorite?' on':''}`} onClick={()=>toggleFavorite(p.id)} aria-label={p.favorite?'Verwijder uit favorieten':'Voeg toe aan favorieten'}>{p.favorite ? '★' : '☆'}</button>
                   {/* PDF export verplaatst naar detailpagina */}
                   <button className="danger" onClick={()=>remove(p.id)}>Verwijderen</button>
                 </div>
@@ -204,8 +204,8 @@ function App() {
                   <div className="sub">{p.year} · {p.courseName} · {p.period.label} · aangemaakt {new Date(p.createdAt).toLocaleDateString()} · bewerkt {new Date(p.updatedAt).toLocaleDateString()}</div>
                 </div>
                 <div className="row-actions">
-                  <Link className="file-label" to={`/plan/${p.id}`}>Bewerken</Link>
-                  <button onClick={()=>toggleFavorite(p.id)}>{p.favorite ? '★' : '☆'}</button>
+                  <Link className="btn" to={`/plan/${p.id}`}>Bewerken</Link>
+                  <button className={`fav-btn${p.favorite?' on':''}`} onClick={()=>toggleFavorite(p.id)} aria-label={p.favorite?'Verwijder uit favorieten':'Voeg toe aan favorieten'}>{p.favorite ? '★' : '☆'}</button>
                   {/* PDF export verplaatst naar detailpagina */}
                   <button className="danger" onClick={()=>remove(p.id)}>Verwijderen</button>
                 </div>
