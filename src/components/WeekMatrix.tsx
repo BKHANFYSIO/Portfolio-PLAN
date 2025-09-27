@@ -384,6 +384,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
         }
       }}
       onPointerDown={(e)=>{
+        // Niet slepen als de interactie in een popover plaatsvindt (Filter/Weergave)
+        const target = e.target as HTMLElement
+        if(target.closest('.wm-filter-popover')){ return }
         dragRef.current.down = true
         dragRef.current.dragging = false
         dragRef.current.lastX = e.clientX
