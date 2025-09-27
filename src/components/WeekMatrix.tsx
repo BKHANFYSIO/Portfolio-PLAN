@@ -493,16 +493,27 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 </div>
                 <div className="wm-filter-group">
                   <div className="wm-filter-title">Layout</div>
-                  <div className="wm-filter-options">
-                    <label className="wm-filter-check"><input type="checkbox" checked={compact} onChange={(e)=> setCompact(e.currentTarget.checked)} /> Compact</label>
-                    <label className="wm-filter-check"><input type="checkbox" checked={ultra} onChange={(e)=> setUltra(e.currentTarget.checked)} /> Ultracompact</label>
+                  <div className="wm-filter-options" role="radiogroup" aria-label="Dichtheid">
+                    {(()=>{
+                      const density = ultra ? 'ultra' : (compact ? 'compact' : 'normal')
+                      const setDensity = (v:'normal'|'compact'|'ultra')=>{
+                        if(v==='normal'){ setCompact(false); setUltra(false) }
+                        else if(v==='compact'){ setCompact(true); setUltra(false) }
+                        else { setCompact(false); setUltra(true) }
+                      }
+                      return (
+                        <>
+                          <label className="wm-filter-check"><input type="radio" name="wm-density" checked={density==='normal'} onChange={()=> setDensity('normal')} /> Normaal</label>
+                          <label className="wm-filter-check"><input type="radio" name="wm-density" checked={density==='compact'} onChange={()=> setDensity('compact')} /> Compact</label>
+                          <label className="wm-filter-check"><input type="radio" name="wm-density" checked={density==='ultra'} onChange={()=> setDensity('ultra')} /> Ultracompact</label>
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="wm-filter-options" style={{marginTop:6}}>
                     <label className="wm-filter-check" title="Probeert alle zichtbare weken in beeld te passen. Bij smalle schermen of veel weken kan horizontale scroll toch zichtbaar blijven."><input type="checkbox" checked={fit} onChange={(e)=> setFit(e.currentTarget.checked)} /> Alle weken passend</label>
                   </div>
-                  <div className="muted" style={{fontSize:12, marginTop:4}}>
-                    Tip: op zeer smalle schermen of bij veel lesweken verschijnt mogelijk nog een horizontale scroll.
-                  </div>
+                  <div className="wm-hint">Op smalle schermen of bij veel lesweken kan er toch een horizontale scroll verschijnen.</div>
                 </div>
                 <div className="wm-filter-group">
                   <div className="wm-filter-title">Volledig scherm</div>
