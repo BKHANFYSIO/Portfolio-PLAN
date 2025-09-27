@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PortfolioPlan, Artifact } from '../lib/storage'
+import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import { getCurriculumForYear, getYears } from '../lib/curriculum'
 import './weekMatrix.css'
 import { KindIcon, PerspectiveIcon } from './icons'
@@ -120,6 +121,151 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const [spacerW, setSpacerW] = useState<number>(0)
   const dragRef = useRef<{down:boolean; dragging:boolean; lastX:number}>({down:false,dragging:false,lastX:0})
   const [dragging, setDragging] = useState(false)
+  const [, forceRerender] = useState(0)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const filterBtnRef = useRef<HTMLButtonElement|null>(null)
+  const filterPopRef = useRef<HTMLDivElement|null>(null)
+  const [isViewOpen, setIsViewOpen] = useState(false)
+  const viewBtnRef = useRef<HTMLButtonElement|null>(null)
+  const viewPopRef = useRef<HTMLDivElement|null>(null)
+  // Weergave-instellingen
+  const uiPref = readJson<Record<string, any>>(LS_KEYS.ui, {})
+  const [compact, setCompact] = useState<boolean>(uiPref?.compact ?? true)
+  const [fit, setFit] = useState<boolean>(uiPref?.fit ?? true)
+  const [ultra, setUltra] = useState<boolean>(uiPref?.ultra ?? false)
+  const baseLeft = compact ? 240 : 260
+  const baseRight = compact ? 116 : 124
+  const baseRight2 = compact ? 116 : 124
+  const baseCol = compact ? 76 : 80
+  const [colWidthPx, setColWidthPx] = useState<number>(baseCol)
+
+  // Filter state
+  const artifactsAll = (plan.artifacts||[])
+  const allKinds = useMemo(()=> Array.from(new Set(artifactsAll.map(a=> String(a.kind||'').trim()).filter(Boolean))), [artifactsAll])
+  const allPersps = useMemo(()=> Array.from(new Set(artifactsAll.flatMap(a=> Array.isArray(a.perspectives)?a.perspectives:[]).filter(Boolean))), [artifactsAll])
+  const [filterKinds, setFilterKinds] = useState<string[]>(Array.isArray(uiPref?.filterKinds)?uiPref.filterKinds:[])
+  const [filterPersp, setFilterPersp] = useState<string[]>(Array.isArray(uiPref?.filterPersp)?uiPref.filterPersp:[])
+  const [filterMode, setFilterMode] = useState<'dim'|'hide'>(uiPref?.filterMode==='hide'?'hide':'dim')
+
+  useEffect(()=>{
+    const next = { ...(readJson<Record<string, any>>(LS_KEYS.ui, {})), filterKinds, filterPersp, filterMode, compact, fit, ultra }
+    writeJson(LS_KEYS.ui, next)
+  }, [filterKinds, filterPersp, filterMode, compact, fit, ultra])
+
+  // Fit: bereken kolombreedte zodat alle weken passen
+  useEffect(()=>{
+    if(!fit){ setColWidthPx(baseCol); return }
+    const calc = ()=>{
+      const wrapW = wrapRef.current?.clientWidth || 0
+      const avail = Math.max(0, wrapW - baseLeft - baseRight - baseRight2)
+      const w = weeks.length>0 ? Math.floor(avail / weeks.length) : baseCol
+      setColWidthPx(Math.max(56, Math.min(120, w)))
+    }
+    calc()
+    window.addEventListener('resize', calc)
+    return ()=> window.removeEventListener('resize', calc)
+  }, [fit, weeks.length, baseLeft, baseRight, baseRight2, baseCol])
+
+  // Sluit popover bij klik buiten of Escape
+  useEffect(()=>{
+    if(!isFilterOpen) return
+    const onDown = (e: MouseEvent)=>{
+      const t = e.target as Node
+      if(filterPopRef.current && filterPopRef.current.contains(t)) return
+      if(filterBtnRef.current && filterBtnRef.current.contains(t as Node)) return
+      setIsFilterOpen(false)
+    }
+    const onKey = (e: KeyboardEvent)=>{ if(e.key==='Escape') setIsFilterOpen(false) }
+    window.addEventListener('mousedown', onDown, true)
+    window.addEventListener('keydown', onKey, true)
+    return ()=>{ window.removeEventListener('mousedown', onDown, true); window.removeEventListener('keydown', onKey, true) }
+  }, [isFilterOpen])
+
+  useEffect(()=>{
+    if(!isViewOpen) return
+    const onDown = (e: MouseEvent)=>{
+      const t = e.target as Node
+      if(viewPopRef.current && viewPopRef.current.contains(t)) return
+      if(viewBtnRef.current && viewBtnRef.current.contains(t as Node)) return
+      setIsViewOpen(false)
+    }
+    const onKey = (e: KeyboardEvent)=>{ if(e.key==='Escape') setIsViewOpen(false) }
+    window.addEventListener('mousedown', onDown, true)
+    window.addEventListener('keydown', onKey, true)
+    return ()=>{ window.removeEventListener('mousedown', onDown, true); window.removeEventListener('keydown', onKey, true) }
+  }, [isViewOpen])
+
+  const isFilterActive = (filterKinds.length>0 || filterPersp.length>0)
+  // Beschikbare opties afhankelijk van de andere filter
+  const availableKinds = useMemo(()=>{
+    if(filterPersp.length===0) return new Set(allKinds)
+    const set = new Set<string>()
+    for(const a of artifactsAll){
+      if(!a.kind) continue
+      const ps = Array.isArray(a.perspectives)?a.perspectives:[]
+      if(ps.some(p=> filterPersp.includes(String(p)))){ set.add(String(a.kind)) }
+    }
+    return set
+  }, [artifactsAll, allKinds, filterPersp])
+  const availablePersps = useMemo(()=>{
+    if(filterKinds.length===0) return new Set(allPersps as string[])
+    const set = new Set<string>()
+    for(const a of artifactsAll){
+      const k = String(a.kind||'')
+      if(!k) continue
+      if(filterKinds.includes(k)){
+        for(const p of (Array.isArray(a.perspectives)?a.perspectives:[])) set.add(String(p))
+      }
+    }
+    return set
+  }, [artifactsAll, allPersps, filterKinds])
+
+  const matchesFilters = (a: Artifact)=>{
+    if(!isFilterActive) return true
+    const kindOk = filterKinds.length===0 || filterKinds.includes(String(a.kind||''))
+    const perspOk = filterPersp.length===0 || (Array.isArray(a.perspectives) && a.perspectives.some(p=> filterPersp.includes(String(p))))
+    // AND tussen categorieën als beide actief zijn; anders één van beide
+    if(filterKinds.length>0 && filterPersp.length>0) return kindOk && perspOk
+    return kindOk && perspOk // wanneer één leeg is, is dat automatisch true
+  }
+
+  // Drag & drop verplaatsen naar andere week
+  function moveArtifactToWeek(artifactId: string, newWeek: number){
+    try{
+      const plans = JSON.parse(localStorage.getItem(LS_KEYS.plans)||'[]') as PortfolioPlan[]
+      const idx = plans.findIndex(p=> p.id===plan.id)
+      if(idx>=0){
+        const arts = plans[idx].artifacts||[]
+        const aIdx = arts.findIndex(a=> a.id===artifactId)
+        if(aIdx>=0){
+          arts[aIdx] = { ...arts[aIdx], week: newWeek, updatedAt: Date.now() }
+          plans[idx] = { ...plans[idx], artifacts: arts, updatedAt: Date.now() }
+          localStorage.setItem(LS_KEYS.plans, JSON.stringify(plans))
+          const localIdx = (plan.artifacts||[]).findIndex(a=> a.id===artifactId)
+          if(localIdx>=0){ (plan.artifacts as any[])[localIdx] = { ...(plan.artifacts as any[])[localIdx], week: newWeek, updatedAt: Date.now() } }
+          // forceer lokale rerender zodat verplaatsing direct zichtbaar is
+          forceRerender(t=>t+1)
+        }
+      }
+    }catch{}
+  }
+
+  // Kleurstrip per soort bewijs
+  const colorForKind = (k?: string)=>{
+    const key = String(k||'').toLowerCase()
+    const map: Record<string,string> = {
+      certificaat: '#2bb673',
+      schriftelijk: '#4f7cff',
+      kennistoets: '#c557c5',
+      vaardigheid: '#f0a657',
+      performance: '#7bd1d9',
+      gesprek: '#ff6b6b',
+      document: '#7986cb',
+      toets: '#c557c5',
+      overig: '#9aa6c6'
+    }
+    return map[key] || '#9aa6c6'
+  }
 
   // Preview modal state
   const [preview, setPreview] = useState<{ title: string; artifacts: Artifact[] } | null>(null)
@@ -135,7 +281,17 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   // Helpers for names
   const outcomeNameById = useMemo(()=>{
     const m = new Map<string,string>()
-    evlForCourse.forEach(b=> b.outcomes.forEach(o=> m.set(o.id, o.name)))
+    const sanitize = (id: string, name: string)=>{
+      const nm = String(name||'').trim()
+      // Specifieke id-prefix (bijv. 1.2 ) verwijderen
+      const exactIdRe = new RegExp('^\\s*' + id.replace('.', '\\.') + '(\\s*[-–·:.,]?\\s*)', 'i')
+      // Generieke fallback (bv. 1.2, 2.10, etc.)
+      const genericIdRe = /^\s*\d+\.\d+\s*[-–·:.,]?\s*/i
+      let out = nm.replace(exactIdRe, '')
+      if(out === nm){ out = nm.replace(genericIdRe, '') }
+      return (out || nm).trim()
+    }
+    evlForCourse.forEach(b=> b.outcomes.forEach(o=> m.set(o.id, sanitize(o.id, o.name))))
     return m
   }, [evlForCourse])
   const caseNameById = useMemo(()=>{
@@ -211,7 +367,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
 
   return (
     <>
-    <div className={`wm-wrap${dragging ? ' dragging' : ''}`} ref={wrapRef}
+    <div className={`wm-wrap${dragging ? ' dragging' : ''}${compact ? ' compact' : ''}${ultra ? ' ultra' : ''}`} ref={wrapRef}
       onWheel={(e)=>{
         if(!wrapRef.current) return
         if(e.shiftKey){
@@ -247,7 +403,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
       onPointerCancel={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
       onPointerLeave={()=>{ dragRef.current.down=false; if(dragRef.current.dragging){ dragRef.current.dragging=false; setDragging(false) } }}
     >
-      <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: '88px', ['--leftWidth' as any]: '300px', ['--rightWidth' as any]: '132px', ['--right2Width' as any]: '132px' }}>
+      <div ref={tableRef} className="wm-table" style={{ ['--weeks' as any]: weeks.length, ['--colWidth' as any]: `${colWidthPx}px`, ['--leftWidth' as any]: `${baseLeft}px`, ['--rightWidth' as any]: `${baseRight}px`, ['--right2Width' as any]: `${baseRight2}px` }}>
         <div className="wm-header">
           <div className="wm-corner">
             <div className="wm-corner-inner">
@@ -260,9 +416,84 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   setOpenCasus(next)
                   setOpenKennis(next)
                 }
-                return <button className="wm-smallbtn" onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
+                return (
+                  <div style={{display:'inline-flex', gap:8}}>
+                    <button className="wm-smallbtn wm-primary" onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
+                    <button ref={filterBtnRef} className="wm-smallbtn wm-primary" onClick={()=> { setIsFilterOpen(v=>!v); setIsViewOpen(false) }}>Filter</button>
+                    <button ref={viewBtnRef} className="wm-smallbtn wm-primary" onClick={()=> { setIsViewOpen(v=>!v); setIsFilterOpen(false) }}>Weergave</button>
+                  </div>
+                )
               })()}
             </div>
+            {isFilterOpen && (
+              <div ref={filterPopRef} className="wm-filter-popover">
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
+                  <div style={{fontWeight:600}}>Filter</div>
+                  <button className="wm-smallbtn" onClick={()=> setIsFilterOpen(false)}>Sluiten</button>
+                </div>
+                <div className="wm-filter-group">
+                  <div className="wm-filter-title">Soort bewijs</div>
+                  <div className="wm-filter-options">
+                    {allKinds.length===0 && (<span className="muted">—</span>)}
+                    {allKinds.map(k => {
+                      const disabled = filterPersp.length>0 && !availableKinds.has(k)
+                      return (
+                        <label key={k} className={`wm-filter-check${disabled?' disabled':''}`} title={disabled? 'Niet van toepassing binnen geselecteerde perspectieven':''}>
+                          <input type="checkbox" disabled={disabled} checked={filterKinds.includes(k)} onChange={()=> setFilterKinds(s=> s.includes(k) ? s.filter(x=>x!==k) : [...s, k])} /> {k}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="wm-filter-group">
+                  <div className="wm-filter-title">Perspectieven</div>
+                  <div className="wm-filter-options">
+                    {allPersps.length===0 && (<span className="muted">—</span>)}
+                    {allPersps.map(p => {
+                      const key = String(p)
+                      const disabled = filterKinds.length>0 && !availablePersps.has(key)
+                      return (
+                        <label key={key} className={`wm-filter-check${disabled?' disabled':''}`} title={disabled? 'Niet van toepassing binnen geselecteerde soort(en)':''}>
+                          <input type="checkbox" disabled={disabled} checked={filterPersp.includes(key)} onChange={()=> setFilterPersp(s=> s.includes(key) ? s.filter(x=>x!==key) : [...s, key])} /> {key}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="wm-filter-group">
+                  <div className="wm-filter-title">Filteropties</div>
+                  <div className="wm-filter-mode">
+                    <label className="wm-filter-check">
+                      <input type="radio" name="wm-hide-mode" checked={filterMode==='dim'} onChange={()=> setFilterMode('dim')} /> Niet-geselecteerd dimmen
+                    </label>
+                    <label className="wm-filter-check">
+                      <input type="radio" name="wm-hide-mode" checked={filterMode==='hide'} onChange={()=> setFilterMode('hide')} /> Niet-geselecteerd verbergen
+                    </label>
+                  </div>
+                  {isFilterActive && (
+                    <div className="wm-filter-actions">
+                      <button className="wm-smallbtn" onClick={()=>{ setFilterKinds([]); setFilterPersp([]) }}>Filters wissen</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {isViewOpen && (
+              <div ref={viewPopRef} className="wm-filter-popover">
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
+                  <div style={{fontWeight:600}}>Weergave</div>
+                  <button className="wm-smallbtn" onClick={()=> setIsViewOpen(false)}>Sluiten</button>
+                </div>
+                <div className="wm-filter-group">
+                  <div className="wm-filter-title">Layout</div>
+                  <div className="wm-filter-options">
+                    <label className="wm-filter-check"><input type="checkbox" checked={compact} onChange={(e)=> setCompact(e.currentTarget.checked)} /> Compact</label>
+                    <label className="wm-filter-check"><input type="checkbox" checked={fit} onChange={(e)=> setFit(e.currentTarget.checked)} /> Alle weken passend</label>
+                    <label className="wm-filter-check"><input type="checkbox" checked={ultra} onChange={(e)=> setUltra(e.currentTarget.checked)} /> Ultracompact</label>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="wm-cols">
             {weeks.map(w=> {
@@ -290,7 +521,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {weeks.map(w => {
                     const outcomeIds = block.outcomes.map(o=>o.id)
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.evlOutcomeIds.some(id=> outcomeIds.includes(id)))
-                return <div key={`evlh-${block.id}-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — week ${w}`) }}>{list.length}</button>}</div>
+                return <div key={`evlh-${block.id}-${w}`} className="wm-cell"
+                  onDragOver={(e)=>{ e.preventDefault() }}
+                  onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}
+                >{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — week ${w}`) }}>{list.length}</button>}</div>
                   })}
                 </div>
                 <div className="wm-vraak sticky-right offset-r2">
@@ -332,19 +566,32 @@ export default function WeekMatrix({ plan, onEdit }: Props){
 
               {open[block.id] && block.outcomes.map(o => (
                 <div key={o.id} className="wm-row">
-                  <div className="wm-rowhead">{o.id} <span className="muted">{o.name}</span></div>
+                  {(()=>{
+                    const clean = (outcomeNameById.get(o.id) || o.name || '').trim()
+                    const startsWithId = new RegExp('^\\s*' + o.id.replace('.', '\\.') + '\\b', 'i').test(clean)
+                    return (
+                      <div className="wm-rowhead">{startsWithId ? clean : (<>{o.id} <span className="muted">{clean}</span></>)}</div>
+                    )
+                  })()}
                   <div className="wm-cells">
                   {weeks.map(w => {
                     const list = artifactsIn(o.id, w)
                     return (
-                      <div key={w} className="wm-cell">
+                      <div key={w} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>
                         {list.length>0 ? (
                           <div className="wm-artlist">
-                            {list.map((a:any)=> (
+                            {list.map((a:any)=> {
+                              const visible = matchesFilters(a)
+                              if(isFilterActive && filterMode==='hide' && !visible){ return null }
+                              const faded = isFilterActive && !visible
+                              return (
                               <button
                                 key={a.id}
-                                className="wm-art"
+                                className={`wm-art${faded ? ' faded' : ''}`}
                                 title={a.name}
+                                draggable
+                                onDragStart={(e)=>{ e.dataTransfer?.setData('text/plain', a.id) }}
+                                data-art-id={a.id}
                                 onMouseEnter={(e)=>{
                                   const btn = e.currentTarget
                                   const cell = btn.closest('.wm-cell') as HTMLElement | null
@@ -359,6 +606,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                   const topOffset = btnRect.top - cellRect.top
                                   btn.style.top = `${Math.max(4, topOffset)}px`
                                   btn.classList.add('wm-art--floating')
+                                  // highlight peers (andere tegels met hetzelfde bewijs-id)
+                                  const peers = document.querySelectorAll(`.wm-art[data-art-id="${a.id}"]`)
+                                  peers.forEach(el=>{ if(el!==btn) (el as HTMLElement).classList.add('wm-art--peer') })
                                 }}
                                 onMouseLeave={(e)=>{
                                   const btn = e.currentTarget
@@ -368,8 +618,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                   if(next && next.classList && next.classList.contains('wm-art-placeholder')){
                                     next.remove()
                                   }
+                                  const peers = document.querySelectorAll(`.wm-art[data-art-id="${a.id}"]`)
+                                  peers.forEach(el=>{ (el as HTMLElement).classList.remove('wm-art--peer') })
                                 }}
                                 onClick={()=> openPreview([a] as any, a.name)}
+                                style={{ ['--kind-color' as any]: colorForKind(a.kind) }}
                               >
                                 <div className="icons-row">
                                   <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
@@ -380,7 +633,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                 </div>
                                 <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
-                            ))}
+                              )
+                            })}
                           </div>
                         ) : null}
                       </div>
@@ -450,7 +704,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.length>0)
-                  return <div key={`cash-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Casussen — week ${w}`)}>{list.length}</button>}</div>
+                  return <div key={`cash-${w}`} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Casussen — week ${w}`)}>{list.length}</button>}</div>
                 })}
               </div>
               <div className="wm-vraak sticky-right offset-r2">
@@ -495,14 +749,21 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.includes(c.id))
                     return (
-                      <div key={w} className="wm-cell">
+                      <div key={w} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>
                         {list.length>0 ? (
                           <div className="wm-artlist">
-                            {list.map((a:any)=> (
+                            {list.map((a:any)=> {
+                              const visible = matchesFilters(a)
+                              if(isFilterActive && filterMode==='hide' && !visible){ return null }
+                              const faded = isFilterActive && !visible
+                              return (
                               <button
                                 key={a.id}
-                                className="wm-art"
+                                className={`wm-art${faded ? ' faded' : ''}`}
                                 title={a.name}
+                                draggable
+                                onDragStart={(e)=>{ e.dataTransfer?.setData('text/plain', a.id) }}
+                                data-art-id={a.id}
                                 onMouseEnter={(e)=>{
                                   const btn = e.currentTarget
                                   const cell = btn.closest('.wm-cell') as HTMLElement | null
@@ -516,6 +777,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                   const topOffset = btnRect.top - cellRect.top
                                   btn.style.top = `${Math.max(4, topOffset)}px`
                                   btn.classList.add('wm-art--floating')
+                                  const peers = document.querySelectorAll(`.wm-art[data-art-id="${a.id}"]`)
+                                  peers.forEach(el=>{ if(el!==btn) (el as HTMLElement).classList.add('wm-art--peer') })
                                 }}
                                 onMouseLeave={(e)=>{
                                   const btn = e.currentTarget
@@ -525,8 +788,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                   if(next && (next as any).classList && next.classList.contains('wm-art-placeholder')){
                                     next.remove()
                                   }
+                                  const peers = document.querySelectorAll(`.wm-art[data-art-id="${a.id}"]`)
+                                  peers.forEach(el=>{ (el as HTMLElement).classList.remove('wm-art--peer') })
                                 }}
                                 onClick={()=> openPreview([a] as any, a.name)}
+                                style={{ ['--kind-color' as any]: colorForKind(a.kind) }}
                               >
                                 <div className="icons-row">
                                   <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
@@ -537,7 +803,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                 </div>
                                 <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
-                            ))}
+                              )
+                            })}
                           </div>
                         ) : null}
                       </div>
@@ -601,7 +868,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.knowledgeIds.length>0)
-                  return <div key={`kenh-${w}`} className="wm-cell">{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Kennis — week ${w}`)}>{list.length}</button>}</div>
+                  return <div key={`kenh-${w}`} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Kennis — week ${w}`)}>{list.length}</button>}</div>
                 })}
               </div>
               <div className="wm-vraak sticky-right offset-r2">
@@ -646,15 +913,32 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.knowledgeIds.includes(k.id))
                     return (
-                      <div key={w} className="wm-cell">
+                      <div key={w} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>
                         {list.length>0 ? (
                           <div className="wm-artlist">
-                            {list.map((a:any)=> (
+                            {list.map((a:any)=> {
+                              const visible = matchesFilters(a)
+                              if(isFilterActive && filterMode==='hide' && !visible){ return null }
+                              const faded = isFilterActive && !visible
+                              return (
                               <button
                                 key={a.id}
-                                className="wm-art"
+                                className={`wm-art${faded ? ' faded' : ''}`}
                                 title={a.name}
                                 onClick={()=> openPreview([a] as any, a.name)}
+                                draggable
+                                onDragStart={(e)=>{ e.dataTransfer?.setData('text/plain', a.id) }}
+                                data-art-id={a.id}
+                                onMouseEnter={(e)=>{
+                                  const btn = e.currentTarget
+                                  const peers = document.querySelectorAll(`.wm-art[data-art-id="${a.id}"]`)
+                                  peers.forEach(el=>{ if(el!==btn) (el as HTMLElement).classList.add('wm-art--peer') })
+                                }}
+                                onMouseLeave={()=>{
+                                  const peers = document.querySelectorAll(`.wm-art[data-art-id="${a.id}"]`)
+                                  peers.forEach(el=>{ (el as HTMLElement).classList.remove('wm-art--peer') })
+                                }}
+                                style={{ ['--kind-color' as any]: colorForKind(a.kind) }}
                               >
                                 <div className="icons-row">
                                   <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
@@ -665,7 +949,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                                 </div>
                                 <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{a.name}</span>
                               </button>
-                            ))}
+                              )
+                            })}
                           </div>
                         ) : null}
                       </div>

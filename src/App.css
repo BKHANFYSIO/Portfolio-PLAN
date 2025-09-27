@@ -3,7 +3,7 @@
 [data-theme-effective='dark']{ color-scheme: dark }
 [data-theme-effective='light']{ color-scheme: light }
 body{ background:linear-gradient(180deg,var(--bg), var(--bg2) 60%, var(--bg)); color:var(--text); overflow-x:hidden }
-#root{ max-width:none; width:100%; margin:0; padding:16px min(4vw,24px); box-sizing:border-box }
+#root{ max-width:none; width:100%; margin:0; padding:10px min(2.5vw,16px); box-sizing:border-box }
 .header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .brand{ display:flex; align-items:center; gap:10px }
 .brand img{ width:84px; height:84px; object-fit:contain; border-radius:6px }

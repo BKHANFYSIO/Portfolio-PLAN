@@ -1,11 +1,38 @@
 .wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
+.wm-wrap.compact .wm-rowhead{ padding:8px 8px }
+.wm-wrap.compact .wm-col{ padding:8px 6px }
+.wm-wrap.compact .wm-cell{ min-height:40px }
+.wm-wrap.compact .wm-art{ padding:4px 6px; border-radius:7px }
+.wm-wrap.compact .wm-art .icons-row{ gap:4px }
+.wm-wrap.compact .icon{ width:12px; height:12px }
+.wm-wrap.compact .wm-smallbtn{ padding:3px 6px; font-size:11px }
+
+/* Ultracompact modus: nog compacter en samenvatting van icons */
+.wm-wrap.ultra .wm-rowhead{ padding:6px 6px; font-size:12px }
+.wm-wrap.ultra .wm-col{ padding:6px 4px; font-size:12px }
+.wm-wrap.ultra .wm-cell{ min-height:34px }
+.wm-wrap.ultra .wm-art{ padding:3px 5px; border-radius:6px }
+.wm-wrap.ultra .icon{ width:10px; height:10px }
+.wm-wrap.ultra .wm-art .icons-row .sep{ display:none }
+.wm-wrap.ultra .wm-art .icons-row span:nth-child(n+4){ display:none } /* max 1-2 icons zichtbaar */
+.wm-wrap.ultra .wm-art .name{ font-size:11px }
 .wm-wrap.dragging{ cursor:grabbing }
 .wm-table{ display:block; min-width:100%; width:max-content; }
 .wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) var(--right2Width); background:var(--surface); z-index:30; left:0; width:100%; box-shadow: var(--sticky-shadow) }
 .wm-corner{ position:sticky; left:0; width:var(--leftWidth); min-width:var(--leftWidth); padding:8px; background:var(--surface); border-right:1px solid var(--line-strong); z-index:4; box-sizing:border-box }
 .wm-corner-inner{ display:flex; align-items:center; justify-content:space-between; gap:8px }
+.wm-filter-popover{ position:absolute; z-index:50; left:8px; top:54px; width:min(520px, 92vw); max-height:60vh; overflow:auto; background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; padding:10px; box-shadow: 0 12px 32px rgba(0,0,0,.35) }
+.wm-filter-group{ margin-top:6px }
+.wm-filter-title{ font-size:12px; color:var(--muted); margin-bottom:4px }
+.wm-filter-options{ display:flex; flex-wrap:wrap; gap:8px }
+.wm-filter-check{ font-size:12px; display:inline-flex; align-items:center; gap:6px }
+.wm-filter-check.disabled{ opacity:.35; pointer-events:none }
+.wm-filter-mode{ margin-top:8px; display:flex; gap:12px; flex-wrap:wrap }
+.wm-filter-actions{ margin-top:8px }
 .wm-smallbtn{ background:var(--tint-weak); color:var(--text); border:1px solid rgba(79,124,255,.45); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer }
 .wm-smallbtn:hover{ background:rgba(79,124,255,.28) }
+.wm-smallbtn.wm-primary{ background: var(--primary); color:#fff; border-color: transparent }
+.wm-smallbtn.wm-primary:hover{ filter: brightness(1.05) }
 .wm-cols{ display:grid; grid-template-columns: repeat(var(--weeks), var(--colWidth)); width:max-content; border-bottom:1px solid var(--line); border-left:1px solid var(--line-strong); padding-left:0 }
 .wm-col{ padding:10px 8px; text-align:center; border-right:1px solid var(--line-strong); color:var(--text) }
 .wm-col.holiday{ background:rgba(255, 200, 0, .16); font-weight:600 }
@@ -36,6 +63,9 @@
 /* Artifact regels in subrijen */
 .wm-artlist{ width:100%; padding:6px 6px; display:flex; flex-direction:column; gap:4px }
 .wm-art{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; text-align:left; background:var(--surface2); border:1px solid var(--line-strong); color:var(--text); padding:6px 6px; border-radius:8px; cursor:pointer; overflow:hidden }
+.wm-art{ position:relative }
+.wm-art::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--kind-color, transparent) }
+.wm-art.faded{ opacity:.25 }
 .wm-art .icons-row{ display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow:hidden; white-space:nowrap }
 .wm-art .icon{ flex:0 0 auto }
 .wm-art .sep{ width:1px; height:12px; background:var(--line-strong); display:inline-block }
@@ -43,6 +73,7 @@
 .wm-art:hover{ background:var(--surface) }
 .wm-art--floating{ background:var(--art-float-bg) !important; border:1px solid var(--line-strong); position:absolute; left:4px; z-index:200; width:max-content; min-width:calc(100% - 8px); max-width:min(560px, 80vw); box-shadow: 0 8px 24px rgba(0,0,0,.45); }
 .wm-art--floating{ opacity:1 }
+.wm-art--peer{ outline:2px solid var(--primary); box-shadow: 0 0 0 2px rgba(79,124,255,.35) inset }
 .wm-art-placeholder{ height:0; visibility:hidden; pointer-events:none }
 .wm-art--floating .icons-row{ flex-wrap:wrap; overflow:visible; white-space:normal }
 .wm-art--floating .name{ white-space:normal; overflow:visible; text-overflow:clip }

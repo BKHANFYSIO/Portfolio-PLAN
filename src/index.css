@@ -52,6 +52,11 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Toggle group styles for AddArtifactDialog */
+.toggle-group .toggle{ position:relative }
+.toggle-group .toggle.active{ background:var(--primary); color:#fff; border-color: transparent }
+.toggle-group .toggle.active::after{ content:''; position:absolute; left:8px; right:8px; bottom:-4px; height:2px; background:var(--primary) }
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

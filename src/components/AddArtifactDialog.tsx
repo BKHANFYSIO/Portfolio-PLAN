@@ -111,9 +111,24 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
     <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog" onClick={e=>e.stopPropagation()}>
         <h3>Bewijsstuk toevoegen</h3>
-        <div style={{display:'flex', gap:8, marginBottom:8}}>
-          <button className="file-label" onClick={()=>{ setMode('wizard'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','wizard') }} disabled={mode==='wizard'}>Stappen</button>
-          <button className="file-label" onClick={()=>{ setMode('full'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','full') }} disabled={mode==='full'}>Formulier</button>
+        <div style={{display:'flex', gap:8, marginBottom:8}} className="toggle-group">
+          <button
+            className={`file-label toggle${mode==='wizard' ? ' active' : ''}`}
+            aria-pressed={mode==='wizard'}
+            onClick={()=>{ setMode('wizard'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','wizard') }}
+          >Stappen</button>
+          <button
+            className={`file-label toggle${mode==='full' ? ' active' : ''}`}
+            aria-pressed={mode==='full'}
+            onClick={()=>{ setMode('full'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','full') }}
+          >Formulier</button>
+        </div>
+        <div className="muted" style={{marginTop:-4, marginBottom:8, fontSize:12}}>
+          {mode==='wizard' ? (
+            <>Je wordt stap voor stap door het toevoegen geleid, met korte toelichting per stap. Handig als je (nog) niet veel met deze app hebt gewerkt.</>
+          ) : (
+            <>Vul alle velden in één overzichtelijk formulier in. Snel als je precies weet wat je wilt toevoegen.</>
+          )}
         </div>
         {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step+1} van {TOTAL_STEPS}</div>}
 

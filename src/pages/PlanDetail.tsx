@@ -331,13 +331,20 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Bewijsstuk toevoegen
           </button>
-          <button className="btn" onClick={()=> setShowPdfGuide(true)}>
-            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16l-6-3-6 3V4a2 2 0 0 1 2-2z"/></svg>
-            Exporteer PDF
-          </button>
           <button className="btn" onClick={()=>setShowList(true)}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             Alle bewijsstukken
+          </button>
+          <button className="btn" onClick={()=> setShowPdfGuide(true)} title="PDF export">
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 2h10l4 4v16H4z"/>
+              <path d="M14 2v4h4"/>
+              <path d="M7 16h2a2 2 0 0 0 0-4H7v4z"/>
+              <path d="M12 12h2a2 2 0 0 1 0 4h-2v-4z"/>
+              <path d="M17 12h2"/>
+              <path d="M17 16h2"/>
+            </svg>
+            PDF
           </button>
           <button className="btn" onClick={openEdit}>
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
@@ -349,7 +356,7 @@ export default function PlanDetail(){
       <section className="layout">
         <main className="center">
           
-          <h3 style={{marginTop:16}}>Matrix (LUK x weken)</h3>
+          <h3 style={{margin:'10px 0 6px'}}>Matrix (LUK x weken)</h3>
           <WeekMatrix
             plan={{...plan, name: localName, period: localPeriod}}
             onEdit={(a)=>{ startEditArtifact(a as any); }}
