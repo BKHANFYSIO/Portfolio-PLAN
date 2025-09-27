@@ -39,6 +39,7 @@ export default function PlanDetail(){
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showOrientation, setShowOrientation] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const swipeRef = useRef<{active:boolean; x:number; y:number}>({active:false,x:0,y:0})
   const [editForm, setEditForm] = useState({
     name: plan?.name || '',
     periodType: (plan?.period?.type as 'periode'|'semester'|'maatwerk') || 'periode',
@@ -404,10 +405,21 @@ export default function PlanDetail(){
       {showAdd && <AddArtifactDialog plan={{...plan, name: localName}} onClose={()=>setShowAdd(false)} onSaved={()=>{}} />}
 
       {showMobileMenu && (
-        <div className="modal-backdrop" onClick={()=> setShowMobileMenu(false)}>
+        <div
+          className="modal-backdrop"
+          onClick={()=> setShowMobileMenu(false)}
+          onTouchStart={(e)=>{ const t=e.touches[0]; swipeRef.current={active:true,x:t.clientX,y:t.clientY}; }}
+          onTouchMove={(e)=>{ if(!swipeRef.current.active) return; const t=e.touches[0]; const dx=Math.abs(t.clientX-swipeRef.current.x); const dy=Math.abs(t.clientY-swipeRef.current.y); if(dx>80 && dx>dy){ setShowMobileMenu(false); swipeRef.current.active=false } }}
+          onTouchEnd={()=>{ swipeRef.current.active=false }}
+        >
           <div className="modal" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header"><h3 style={{margin:0}}>Menu</h3></div>
-            <div className="modal-body" style={{display:'grid', gap:8}}>
+            <div className="modal-header" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>Menu</h3>
+              <button className="icon-btn" aria-label="Sluiten" onClick={()=> setShowMobileMenu(false)}>
+                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+            <div className="modal-body menu-list" style={{display:'grid', gap:8}}>
               <Link className="btn" to="/" onClick={()=> setShowMobileMenu(false)}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Terug</Link>
               <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowAdd(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Bewijsstuk toevoegen</button>
               <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowList(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Alle bewijsstukken</button>
