@@ -133,6 +133,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const [compact, setCompact] = useState<boolean>(uiPref?.compact ?? true)
   const [fit, setFit] = useState<boolean>(uiPref?.fit ?? true)
   const [ultra, setUltra] = useState<boolean>(uiPref?.ultra ?? false)
+  const [fsRequested, setFsRequested] = useState<boolean>(false)
   const baseLeft = compact ? 240 : 260
   const baseRight = compact ? 116 : 124
   const baseRight2 = compact ? 116 : 124
@@ -151,6 +152,12 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     const next = { ...(readJson<Record<string, any>>(LS_KEYS.ui, {})), filterKinds, filterPersp, filterMode, compact, fit, ultra }
     writeJson(LS_KEYS.ui, next)
   }, [filterKinds, filterPersp, filterMode, compact, fit, ultra])
+
+  useEffect(()=>{
+    const onFs = ()=> setFsRequested(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onFs)
+    return ()=> document.removeEventListener('fullscreenchange', onFs)
+  }, [])
 
   // Fit: bereken kolombreedte zodat alle weken passen
   useEffect(()=>{
@@ -490,6 +497,16 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     <label className="wm-filter-check"><input type="checkbox" checked={compact} onChange={(e)=> setCompact(e.currentTarget.checked)} /> Compact</label>
                     <label className="wm-filter-check"><input type="checkbox" checked={fit} onChange={(e)=> setFit(e.currentTarget.checked)} /> Alle weken passend</label>
                     <label className="wm-filter-check"><input type="checkbox" checked={ultra} onChange={(e)=> setUltra(e.currentTarget.checked)} /> Ultracompact</label>
+                  </div>
+                </div>
+                <div className="wm-filter-group">
+                  <div className="wm-filter-title">Volledig scherm</div>
+                  <div className="wm-filter-options">
+                    <button className="wm-smallbtn wm-primary" onClick={()=>{
+                      const el = document.querySelector('.center') as HTMLElement | null
+                      if(!el) return
+                      if(!document.fullscreenElement){ el.requestFullscreen?.() } else { document.exitFullscreen?.() }
+                    }}>{fsRequested ? 'Sluit' : 'Open'} volledig scherm</button>
                   </div>
                 </div>
               </div>

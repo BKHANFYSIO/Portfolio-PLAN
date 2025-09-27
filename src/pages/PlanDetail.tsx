@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -36,6 +36,9 @@ export default function PlanDetail(){
   const [editArtifactVraak, setEditArtifactVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
   const [editArtifactPersp, setEditArtifactPersp] = useState<PerspectiveKey[]>([])
   const [showEdit, setShowEdit] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showOrientation, setShowOrientation] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [editForm, setEditForm] = useState({
     name: plan?.name || '',
     periodType: (plan?.period?.type as 'periode'|'semester'|'maatwerk') || 'periode',
@@ -45,6 +48,29 @@ export default function PlanDetail(){
     periodEndWeek: String(plan?.period?.type==='maatwerk' ? (plan?.period?.value as number[])[1] : ''),
   })
   const yearWeeks = getYears().find(y=>y.year===plan.year)?.weeks || []
+
+  const centerRef = useRef<HTMLElement|null>(null)
+
+  useEffect(()=>{
+    const update = ()=>{
+      const isPortrait = window.matchMedia('(orientation: portrait)').matches
+      const isNarrow = window.innerWidth < 1024
+      setShowOrientation(isPortrait && isNarrow)
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('orientationchange', update as any)
+    const onFsChange = ()=> setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onFsChange)
+    return ()=>{ window.removeEventListener('resize', update); window.removeEventListener('orientationchange', update as any); document.removeEventListener('fullscreenchange', onFsChange) }
+  }, [])
+
+  function toggleFullscreen(){
+    const el = centerRef.current as HTMLElement | null
+    if(!el) return
+    if(!document.fullscreenElement){ el.requestFullscreen?.(); }
+    else{ document.exitFullscreen?.() }
+  }
 
   function getVisibleWeekNumbers(p: PortfolioPlan['period']){
     const all = yearWeeks
@@ -323,6 +349,10 @@ export default function PlanDetail(){
           <div className="muted">{plan.year} · {plan.courseName} · {localPeriod?.label}</div>
         </div>
         <div className="actions">
+          <button className="icon-btn actions-mobile" onClick={()=> setShowMobileMenu(true)} aria-label="Menu">
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div className="actions-desktop">
           <Link className="btn" to="/">
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
             Terug
@@ -350,13 +380,20 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
             Bewerken
           </button>
+          </div>
         </div>
       </header>
 
       <section className="layout">
-        <main className="center">
-          
-          <h3 style={{margin:'10px 0 6px'}}>Matrix (LUK x weken)</h3>
+        <main className="center" ref={centerRef as any}>
+          <div className="matrix-header">
+            <h3>Matrix (LUK x weken)</h3>
+            <button className="icon-btn" onClick={toggleFullscreen} title={isFullscreen? 'Sluit volledig scherm':'Volledig scherm'}>
+              <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/>
+              </svg>
+            </button>
+          </div>
           <WeekMatrix
             plan={{...plan, name: localName, period: localPeriod}}
             onEdit={(a)=>{ startEditArtifact(a as any); }}
@@ -365,6 +402,35 @@ export default function PlanDetail(){
       </section>
 
       {showAdd && <AddArtifactDialog plan={{...plan, name: localName}} onClose={()=>setShowAdd(false)} onSaved={()=>{}} />}
+
+      {showMobileMenu && (
+        <div className="modal-backdrop" onClick={()=> setShowMobileMenu(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header"><h3 style={{margin:0}}>Menu</h3></div>
+            <div className="modal-body" style={{display:'grid', gap:8}}>
+              <Link className="btn" to="/" onClick={()=> setShowMobileMenu(false)}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Terug</Link>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowAdd(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Bewijsstuk toevoegen</button>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowList(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Alle bewijsstukken</button>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowPdfGuide(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2h10l4 4v16H4z"/><path d="M14 2v4h4"/></svg> PDF</button>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); openEdit() }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg> Bewerken</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOrientation && (
+        <div className="orientation-overlay" onClick={()=> setShowOrientation(false)}>
+          <div className="orientation-panel" onClick={e=>e.stopPropagation()}>
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" style={{width:24,height:24}}>
+              <path d="M3 7h14v10H3z"/>
+              <path d="M17 9l4 3-4 3"/>
+            </svg>
+            <div style={{fontWeight:600}}>Beste weergave in liggende stand</div>
+            <div className="muted" style={{fontSize:12}}>Draai je toestel voor optimale bediening van de matrix.</div>
+            <button className="file-label" style={{marginTop:10}} onClick={()=> setShowOrientation(false)}>Begrepen</button>
+          </div>
+        </div>
+      )}
 
       {showPdfGuide && (
         <div className="dialog-backdrop" onClick={()=>setShowPdfGuide(false)}>
