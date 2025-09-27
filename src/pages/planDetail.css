@@ -35,3 +35,9 @@
 .orientation-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:60 }
 .orientation-panel{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; padding:16px; width:min(360px, 92vw); text-align:center; display:grid; gap:8px }
 
+/* Volledig scherm (mobiel en desktop): verwijder padding/rand en vul viewport */
+.center:fullscreen, .center:-webkit-full-screen{
+  padding:0; margin:0; border:none; border-radius:0;
+  width:100vw; height:100dvh; max-height:none; background:var(--surface);
+}
+
