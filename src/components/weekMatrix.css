@@ -10,12 +10,17 @@
 /* Ultracompact modus: nog compacter en samenvatting van icons */
 .wm-wrap.ultra .wm-rowhead{ padding:6px 6px; font-size:12px }
 .wm-wrap.ultra .wm-col{ padding:6px 4px; font-size:12px }
-.wm-wrap.ultra .wm-cell{ min-height:34px }
+.wm-wrap.ultra .wm-cell{ min-height:30px }
 .wm-wrap.ultra .wm-art{ padding:3px 5px; border-radius:6px }
 .wm-wrap.ultra .icon{ width:10px; height:10px }
 .wm-wrap.ultra .wm-art .icons-row .sep{ display:none }
 .wm-wrap.ultra .wm-art .icons-row span:nth-child(n+4){ display:none } /* max 1-2 icons zichtbaar */
 .wm-wrap.ultra .wm-art .name{ font-size:11px }
+
+/* header/kolommen compacter in ultra */
+.wm-wrap.ultra .wm-header{ grid-template-columns: var(--leftWidth) max-content calc(var(--rightWidth) - 8px) calc(var(--right2Width) - 8px) }
+.wm-wrap.ultra .wm-vcol, .wm-wrap.ultra .wm-scol{ padding:6px 6px }
+.wm-wrap.ultra .wm-vraak, .wm-wrap.ultra .wm-self{ padding:6px 6px }
 .wm-wrap.dragging{ cursor:grabbing }
 .wm-table{ display:block; min-width:100%; width:max-content; }
 .wm-header{ position:sticky; top:0; display:grid; grid-template-columns: var(--leftWidth) max-content var(--rightWidth) var(--right2Width); background:var(--surface); z-index:30; left:0; width:100%; box-shadow: var(--sticky-shadow) }

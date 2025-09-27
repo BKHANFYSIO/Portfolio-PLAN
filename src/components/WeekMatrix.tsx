@@ -134,10 +134,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const [fit, setFit] = useState<boolean>(uiPref?.fit ?? true)
   const [ultra, setUltra] = useState<boolean>(uiPref?.ultra ?? false)
   const [fsRequested, setFsRequested] = useState<boolean>(false)
-  const baseLeft = compact ? 240 : 260
-  const baseRight = compact ? 116 : 124
-  const baseRight2 = compact ? 116 : 124
-  const baseCol = compact ? 76 : 80
+  const baseLeft = ultra ? 220 : (compact ? 240 : 260)
+  const baseRight = ultra ? 108 : (compact ? 116 : 124)
+  const baseRight2 = ultra ? 108 : (compact ? 116 : 124)
+  const baseCol = ultra ? 68 : (compact ? 76 : 80)
   const [colWidthPx, setColWidthPx] = useState<number>(baseCol)
 
   // Filter state
@@ -166,7 +166,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
       const wrapW = wrapRef.current?.clientWidth || 0
       const avail = Math.max(0, wrapW - baseLeft - baseRight - baseRight2)
       const w = weeks.length>0 ? Math.floor(avail / weeks.length) : baseCol
-      setColWidthPx(Math.max(56, Math.min(120, w)))
+      setColWidthPx(Math.max(ultra?48:56, Math.min(120, w)))
     }
     calc()
     window.addEventListener('resize', calc)
