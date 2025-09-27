@@ -495,8 +495,13 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   <div className="wm-filter-title">Layout</div>
                   <div className="wm-filter-options">
                     <label className="wm-filter-check"><input type="checkbox" checked={compact} onChange={(e)=> setCompact(e.currentTarget.checked)} /> Compact</label>
-                    <label className="wm-filter-check"><input type="checkbox" checked={fit} onChange={(e)=> setFit(e.currentTarget.checked)} /> Alle weken passend</label>
                     <label className="wm-filter-check"><input type="checkbox" checked={ultra} onChange={(e)=> setUltra(e.currentTarget.checked)} /> Ultracompact</label>
+                  </div>
+                  <div className="wm-filter-options" style={{marginTop:6}}>
+                    <label className="wm-filter-check" title="Probeert alle zichtbare weken in beeld te passen. Bij smalle schermen of veel weken kan horizontale scroll toch zichtbaar blijven."><input type="checkbox" checked={fit} onChange={(e)=> setFit(e.currentTarget.checked)} /> Alle weken passend</label>
+                  </div>
+                  <div className="muted" style={{fontSize:12, marginTop:4}}>
+                    Tip: op zeer smalle schermen of bij veel lesweken verschijnt mogelijk nog een horizontale scroll.
                   </div>
                 </div>
                 <div className="wm-filter-group">
