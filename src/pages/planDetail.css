@@ -42,4 +42,8 @@
   padding:0; margin:0; border:none; border-radius:0;
   width:100vw; height:100dvh; max-height:none; background:var(--surface);
 }
+/* compacter header in fullscreen */
+.center:fullscreen .matrix-header, .center:-webkit-full-screen .matrix-header{ margin:2px 6px 4px; }
+.center:fullscreen .matrix-header h3, .center:-webkit-full-screen .matrix-header h3{ font-size:14px; margin:0 }
+.center:fullscreen .icon-btn, .center:-webkit-full-screen .icon-btn{ padding:4px 6px; border-radius:6px }
 
