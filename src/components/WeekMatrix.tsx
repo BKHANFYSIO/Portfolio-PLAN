@@ -682,6 +682,15 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
                         e.stopPropagation()
                         const el = e.currentTarget
+                        if((e as any).pointerType === 'touch'){
+                          const startX = e.clientX, startY = e.clientY
+                          let moved = false
+                          const move = (ev: PointerEvent)=>{ const dx=Math.abs(ev.clientX-startX); const dy=Math.abs(ev.clientY-startY); if(dx>10 || dy>10) moved=true }
+                          const up = (ev: PointerEvent)=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true); if(!moved){ onPointer(ev.clientX, el) } }
+                          window.addEventListener('pointermove', move, true)
+                          window.addEventListener('pointerup', up, true)
+                          return
+                        }
                         el.setPointerCapture?.(e.pointerId)
                         onPointer(e.clientX, el)
                         const move = (ev: PointerEvent)=>{ if(ev.buttons&1){ onPointer(ev.clientX, el) } }
@@ -847,7 +856,16 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       updateSelfLevel(c.id, step)
                     }
                     const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
-                      e.stopPropagation(); const el = e.currentTarget; el.setPointerCapture?.(e.pointerId)
+                      e.stopPropagation(); const el = e.currentTarget
+                      if((e as any).pointerType === 'touch'){
+                        const startX = e.clientX, startY = e.clientY
+                        let moved = false
+                        const move = (ev: PointerEvent)=>{ const dx=Math.abs(ev.clientX-startX); const dy=Math.abs(ev.clientY-startY); if(dx>10 || dy>10) moved=true }
+                        const up = (ev: PointerEvent)=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true); if(!moved){ onPointer(ev.clientX, el) } }
+                        window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true)
+                        return
+                      }
+                      el.setPointerCapture?.(e.pointerId)
                       onPointer(e.clientX, el)
                       const move = (ev: PointerEvent)=>{ if(ev.buttons&1){ onPointer(ev.clientX, el) } }
                       const up = ()=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true) }
@@ -993,7 +1011,16 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       updateSelfLevel(k.id, step)
                     }
                     const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
-                      e.stopPropagation(); const el = e.currentTarget; el.setPointerCapture?.(e.pointerId)
+                      e.stopPropagation(); const el = e.currentTarget
+                      if((e as any).pointerType === 'touch'){
+                        const startX = e.clientX, startY = e.clientY
+                        let moved = false
+                        const move = (ev: PointerEvent)=>{ const dx=Math.abs(ev.clientX-startX); const dy=Math.abs(ev.clientY-startY); if(dx>10 || dy>10) moved=true }
+                        const up = (ev: PointerEvent)=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true); if(!moved){ onPointer(ev.clientX, el) } }
+                        window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true)
+                        return
+                      }
+                      el.setPointerCapture?.(e.pointerId)
                       onPointer(e.clientX, el)
                       const move = (ev: PointerEvent)=>{ if(ev.buttons&1){ onPointer(ev.clientX, el) } }
                       const up = ()=>{ window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true) }
