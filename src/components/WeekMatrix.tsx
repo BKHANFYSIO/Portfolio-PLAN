@@ -125,9 +125,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterBtnRef = useRef<HTMLButtonElement|null>(null)
   const filterPopRef = useRef<HTMLDivElement|null>(null)
+  const [filterTop, setFilterTop] = useState<number>(0)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const viewBtnRef = useRef<HTMLButtonElement|null>(null)
   const viewPopRef = useRef<HTMLDivElement|null>(null)
+  const [viewTop, setViewTop] = useState<number>(0)
   // Weergave-instellingen
   const uiPref = readJson<Record<string, any>>(LS_KEYS.ui, {})
   const [compact, setCompact] = useState<boolean>(uiPref?.compact ?? false)
@@ -429,14 +431,22 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 return (
                   <div style={{display:'inline-flex', gap:8}}>
                     <button className="wm-smallbtn wm-primary" onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
-                    <button ref={filterBtnRef} className="wm-smallbtn wm-primary" onClick={()=> { setIsFilterOpen(v=>!v); setIsViewOpen(false) }}>Filter</button>
-                    <button ref={viewBtnRef} className="wm-smallbtn wm-primary" onClick={()=> { setIsViewOpen(v=>!v); setIsFilterOpen(false) }}>Weergave</button>
+                    <button ref={filterBtnRef} className="wm-smallbtn wm-primary" onClick={()=> {
+                      const rect = filterBtnRef.current?.getBoundingClientRect()
+                      setFilterTop(Math.max(8, (rect?.bottom||56) + 8))
+                      setIsFilterOpen(v=>!v); setIsViewOpen(false)
+                    }}>Filter</button>
+                    <button ref={viewBtnRef} className="wm-smallbtn wm-primary" onClick={()=> {
+                      const rect = viewBtnRef.current?.getBoundingClientRect()
+                      setViewTop(Math.max(8, (rect?.bottom||56) + 8))
+                      setIsViewOpen(v=>!v); setIsFilterOpen(false)
+                    }}>Weergave</button>
                   </div>
                 )
               })()}
             </div>
             {isFilterOpen && (
-              <div ref={filterPopRef} className="wm-filter-popover">
+              <div ref={filterPopRef} className="wm-filter-popover" style={{ position:'fixed', left:8, right:8, top: filterTop, maxHeight: `calc(100dvh - ${filterTop + 16}px)` }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
                   <div style={{fontWeight:600}}>Filter</div>
                   <button className="wm-smallbtn" onClick={()=> setIsFilterOpen(false)}>Sluiten</button>
@@ -489,7 +499,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               </div>
             )}
             {isViewOpen && (
-              <div ref={viewPopRef} className="wm-filter-popover">
+              <div ref={viewPopRef} className="wm-filter-popover" style={{ position:'fixed', left:8, right:8, top: viewTop, maxHeight: `calc(100dvh - ${viewTop + 16}px)` }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
                   <div style={{fontWeight:600}}>Weergave</div>
                   <button className="wm-smallbtn" onClick={()=> setIsViewOpen(false)}>Sluiten</button>
