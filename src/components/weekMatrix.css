@@ -19,6 +19,9 @@
 
 /* header/kolommen compacter in ultra */
 .wm-wrap.ultra .wm-header{ grid-template-columns: var(--leftWidth) max-content calc(var(--rightWidth) - 8px) calc(var(--right2Width) - 8px) }
+.wm-wrap.ultra .wm-corner-inner{ gap:6px }
+.wm-wrap.ultra .wm-smallbtn{ padding:2px 6px; font-size:11px; border-radius:7px }
+.wm-wrap.ultra .wm-corner{ padding:6px }
 .wm-wrap.ultra .wm-vcol, .wm-wrap.ultra .wm-scol{ padding:6px 6px }
 .wm-wrap.ultra .wm-vraak, .wm-wrap.ultra .wm-self{ padding:6px 6px }
 .wm-wrap.dragging{ cursor:grabbing }

@@ -130,7 +130,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const viewPopRef = useRef<HTMLDivElement|null>(null)
   // Weergave-instellingen
   const uiPref = readJson<Record<string, any>>(LS_KEYS.ui, {})
-  const [compact, setCompact] = useState<boolean>(uiPref?.compact ?? true)
+  const [compact, setCompact] = useState<boolean>(uiPref?.compact ?? false)
   const [fit, setFit] = useState<boolean>(uiPref?.fit ?? true)
   const [ultra, setUltra] = useState<boolean>(uiPref?.ultra ?? false)
   const [fsRequested, setFsRequested] = useState<boolean>(false)
@@ -510,6 +510,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       )
                     })()}
                   </div>
+                  <div className="wm-hint">Je kunt ook in- en uitzoomen met Ctrl + muiswiel.</div>
                   <div className="wm-filter-options" style={{marginTop:6}}>
                     <label className="wm-filter-check" title="Probeert alle zichtbare weken in beeld te passen. Bij smalle schermen of veel weken kan horizontale scroll toch zichtbaar blijven."><input type="checkbox" checked={fit} onChange={(e)=> setFit(e.currentTarget.checked)} /> Alle weken passend</label>
                   </div>
