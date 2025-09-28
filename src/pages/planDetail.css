@@ -33,13 +33,6 @@
   .actions-mobile{ display:inline-flex }
 }
 
-/* Print-styles */
-@media print{
-  @page { size: A4 landscape; margin: 10mm }
-  .print-block{ break-inside: avoid; page-break-inside: avoid }
-  .detail, .center{ overflow: visible }
-}
-
 /* Orientatie-overlay */
 .orientation-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:60 }
 .orientation-panel{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; padding:16px; width:min(360px, 92vw); text-align:center; display:grid; gap:8px }

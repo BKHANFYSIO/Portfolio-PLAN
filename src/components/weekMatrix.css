@@ -119,6 +119,13 @@
 .vraak-bars .bar .fill{ position:absolute; left:0; right:0; bottom:0; height:0%; border-radius:3px; transition:height .2s ease }
 .vraak-bars .bar .lbl{ position:absolute; bottom:-14px; left:50%; transform:translateX(-50%); font-size:10px; color:var(--muted) }
 
+/* Export-view tweaks (alleen voor offscreen clone) */
+.wm-export .wm-header,
+.wm-export .wm-rowhead,
+.wm-export .sticky-right,
+.wm-export .sticky-bottom{ position: static !important; box-shadow: none !important }
+.wm-export .wm-wrap{ overflow: visible !important; height: auto !important }
+
 /* masker om de sticky linkerkolom vrij te houden van de horizontale scrollbar */
 .wm-mask-left{ position:sticky; left:0; bottom:0; width:var(--leftWidth); height:12px; background:var(--surface); z-index:5 }
 

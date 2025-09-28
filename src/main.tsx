@@ -20,11 +20,9 @@ async function bootstrap(){
   // Zorg dat de gekozen thema-instelling (light/dark/system) direct geldt bij initial load
   applyTheme()
 
-  const PrintPlan = (await import('./pages/PrintPlan')).default
   const router = createBrowserRouter([
     { path: '/', element: <App /> },
     { path: '/plan/:id', element: <PlanDetail /> },
-    { path: '/print/:id', element: <PrintPlan /> },
     { path: '/admin', element: <Admin /> },
   ])
 

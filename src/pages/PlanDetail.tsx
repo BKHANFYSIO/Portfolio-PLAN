@@ -6,13 +6,16 @@ import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { PortfolioPlan } from '../lib/storage'
 import './planDetail.css'
 import AddArtifactDialog from '../components/AddArtifactDialog'
-import WeekMatrix from '../components/WeekMatrix'
+import WeekMatrix, { WeekMatrixHandle } from '../components/WeekMatrix'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { getYears } from '../lib/curriculum'
 import { KindIcon, PerspectiveIcon } from '../components/icons'
 import type { PerspectiveKey } from '../lib/storage'
 import { getCurriculumForYear } from '../lib/curriculum'
 
 export default function PlanDetail(){
+  const matrixRef = useRef<WeekMatrixHandle|null>(null)
   const { id } = useParams()
   const plans = readJson(LS_KEYS.plans, [] as any[])
   const plan = plans.find(p=>p.id===id)
@@ -71,6 +74,105 @@ export default function PlanDetail(){
     if(!el) return
     if(!document.fullscreenElement){ el.requestFullscreen?.(); }
     else{ document.exitFullscreen?.() }
+  }
+
+  async function exportPdfFullMatrix(){
+    try{
+      // 1) Expand all
+      await matrixRef.current?.expandAllForExport()
+      const table = matrixRef.current?.getTableElement()
+      if(!table) return
+
+      // 2) Clone offscreen
+      const wrapper = document.createElement('div')
+      wrapper.style.position = 'fixed'
+      wrapper.style.left = '-10000px'
+      wrapper.style.top = '0'
+      wrapper.style.zIndex = '0'
+      const cloneRoot = table.cloneNode(true) as HTMLElement
+      cloneRoot.classList.add('wm-export')
+      wrapper.appendChild(cloneRoot)
+      document.body.appendChild(wrapper)
+
+      // Force layout
+      await new Promise(r=> requestAnimationFrame(r))
+
+      const pageWidth = 1600 // px basis voor goede kwaliteit; wordt geschaald in PDF
+      const originalWidth = cloneRoot.scrollWidth || cloneRoot.clientWidth
+      const scale = originalWidth>0 ? pageWidth / originalWidth : 1
+
+      const viewport = document.createElement('div')
+      viewport.style.position = 'fixed'
+      viewport.style.left = '-10000px'
+      viewport.style.top = '0'
+      viewport.style.width = `${pageWidth}px`
+      const pageHeight = 1120 // px bij landscape verhouding
+      viewport.style.height = `${pageHeight}px`
+      viewport.style.overflow = 'hidden'
+
+      const scWrap = document.createElement('div')
+      scWrap.style.transformOrigin = 'top left'
+      scWrap.style.transform = `scale(${scale})`
+      scWrap.appendChild(cloneRoot)
+      viewport.appendChild(scWrap)
+      document.body.appendChild(viewport)
+
+      // Bepaal blokken (alle EVL hoofden + casus/kennis secties)
+      const blocks: Array<{top:number;height:number}> = []
+      const heads = Array.from(viewport.querySelectorAll('.wm-evlhead')) as HTMLElement[]
+      const pushBlock = (startEl: HTMLElement, endEl?: HTMLElement)=>{
+        const top = startEl.offsetTop
+        const height = (endEl? endEl.offsetTop : (cloneRoot.offsetTop + cloneRoot.scrollHeight)) - top
+        blocks.push({ top, height })
+      }
+      for(let i=0;i<heads.length;i++){
+        pushBlock(heads[i], heads[i+1])
+      }
+
+      // Fallback: als geen blokken gevonden (zou niet moeten), gebruik hele tabel
+      if(blocks.length===0){ blocks.push({ top:0, height: cloneRoot.scrollHeight }) }
+
+      const pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
+      const pdfW = pdf.internal.pageSize.getWidth()
+      const pdfH = pdf.internal.pageSize.getHeight()
+
+      let yOffset = 0
+      let pageIndex = 0
+      const margin = 16
+
+      const toCanvas = async (y:number)=>{
+        scWrap.style.transform = `scale(${scale}) translateY(-${y}px)`
+        await new Promise(r=> requestAnimationFrame(r))
+        return await html2canvas(viewport, { scale: 2, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff' })
+      }
+
+      for(const block of blocks){
+        if(yOffset + block.height > (pageIndex+1)*pageHeight - margin){
+          // start nieuwe pagina
+          const snapY = pageIndex*pageHeight
+          const canvas = await toCanvas(snapY)
+          const img = canvas.toDataURL('image/png')
+          pdf.addImage(img, 'PNG', 0, 0, pdfW, pdfH)
+          pdf.addPage('a4','landscape')
+          pageIndex++
+        }
+        yOffset = block.top + block.height
+      }
+      // laatste pagina
+      const lastY = pageIndex*pageHeight
+      const canvas = await toCanvas(lastY)
+      const img = canvas.toDataURL('image/png')
+      pdf.addImage(img, 'PNG', 0, 0, pdfW, pdfH)
+
+      // cleanup
+      document.body.removeChild(viewport)
+      document.body.removeChild(wrapper)
+
+      pdf.save(`${localName.replace(/\s+/g,'_')}_matrix.pdf`)
+    }catch(err){
+      console.error('export failed', err)
+      alert('Exporteren is niet gelukt. Probeer opnieuw.')
+    }
   }
 
   function getVisibleWeekNumbers(p: PortfolioPlan['period']){
@@ -366,11 +468,7 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             Alle bewijsstukken
           </button>
-          <a className="btn" href={`/print/${plan.id}`} target="_blank" rel="noopener noreferrer" title="Print of exporteer naar PDF">
-            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2h10l4 4v16H4z"/><path d="M14 2v4h4"/></svg>
-            Print / PDF
-          </a>
-          <button className="btn" onClick={()=> setShowPdfGuide(true)} title="PDF export">
+          <button className="btn" onClick={exportPdfFullMatrix} title="PDF export (matrix 1:1)">
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 2h10l4 4v16H4z"/>
               <path d="M14 2v4h4"/>

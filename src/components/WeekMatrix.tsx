@@ -1,13 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from 'react'
 import type { PortfolioPlan, Artifact } from '../lib/storage'
 import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import { getCurriculumForYear, getYears } from '../lib/curriculum'
 import './weekMatrix.css'
 import { KindIcon, PerspectiveIcon } from './icons'
 
+export type WeekMatrixHandle = {
+  expandAllForExport: () => Promise<void>
+  getTableElement: () => HTMLElement | null
+}
+
 type Props = { plan: PortfolioPlan; onEdit?: (a: Artifact)=>void }
 
-export default function WeekMatrix({ plan, onEdit }: Props){
+function WeekMatrix({ plan, onEdit }: Props, ref: React.Ref<WeekMatrixHandle>){
   const { evl, courses } = getCurriculumForYear(plan.year)
   const years = getYears()
   const course = courses.find(c=>c.id===plan.courseId)
@@ -412,6 +417,18 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     h.addEventListener('scroll', onH, { passive: true })
     return () => { w.removeEventListener('scroll', onWrap); h.removeEventListener('scroll', onH) }
   }, [spacerW])
+
+  useImperativeHandle(ref, () => ({
+    expandAllForExport: async () => {
+      try{
+        setOpen(Object.fromEntries(evlForCourse.map(b=>[b.id, true])))
+        setOpenCasus(true)
+        setOpenKennis(true)
+        await new Promise(r=> requestAnimationFrame(()=> requestAnimationFrame(r)))
+      }catch{}
+    },
+    getTableElement: () => tableRef.current as HTMLElement | null
+  }), [evlForCourse])
 
   return (
     <>
@@ -1388,4 +1405,4 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   )
 }
 
-
+export default forwardRef(WeekMatrix)
