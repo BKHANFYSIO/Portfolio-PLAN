@@ -243,14 +243,85 @@ export default function PlanDetail(){
     if(wrap){ wrap.scrollLeft = 0; wrap.scrollTop = 0 }
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
     const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2, windowWidth: container.scrollWidth, windowHeight: container.scrollHeight })
-    const img = canvas.toDataURL('image/png')
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-    const w = canvas.width * ratio
-    const h = canvas.height * ratio
-    const x = (pageW - w)/2, y = (pageH - h)/2
-    doc.addImage(img, 'PNG', x, y, w, h)
+    const scale = canvas.width / container.scrollWidth
+    // Maximale canvas-hoogte die op één A4 past bij breedte=pageW
+    const maxSliceCanvasH = Math.floor(canvas.width * (pageH / pageW))
+
+    // Bepaal blokken (EVL/categorieën) uit de wm-body, zodat we nooit binnen een blok breken
+    const body = container.querySelector('.wm-body') as HTMLElement | null
+    const header = container.querySelector('.wm-header') as HTMLElement | null
+    const headerCanvasH = Math.floor((header?.offsetHeight || 0) * scale)
+    const blocks = Array.from((body?.children || []) as any as HTMLElement[])
+
+    // Helper: hoogte in canvas-px van een element
+    const toC = (px:number)=> Math.floor(px * scale)
+
+    // Stel pagina-slices samen op canvas-coördinaten (startY, height)
+    type Slice = { start: number; height: number }
+    const slices: Slice[] = []
+    let curStart = 0
+    let curH = 0
+
+    // Neem header mee op de eerste pagina
+    if(headerCanvasH>0){ curH += headerCanvasH }
+
+    for(const block of blocks){
+      const blockH = toC(block.offsetHeight)
+      const fitsInEmpty = blockH <= maxSliceCanvasH
+      const hasSpace = (curH + blockH) <= maxSliceCanvasH
+      if(hasSpace){
+        curH += blockH
+        continue
+      }
+      // Als huidige pagina iets bevat → finalizeer en start nieuwe
+      if(curH>0){ slices.push({ start: curStart, height: curH }); curStart += curH; curH = 0 }
+      // Past het blok op een lege pagina? Dan plaats het in één keer, anders splits op rijen
+      if(fitsInEmpty){
+        curH = blockH
+      }else{
+        // Splits op subrijen binnen dit blok (evlhead + .wm-row)
+        const head = block.querySelector('.wm-evlhead') as HTMLElement | null
+        const headH = toC(head?.offsetHeight || 0)
+        const rows = Array.from(block.querySelectorAll('.wm-row')) as HTMLElement[]
+        const rowHs = rows.map(r => toC(r.offsetHeight))
+        let idx = 0
+        while(idx < rowHs.length){
+          // Start met (optionele) evlhead op elke vervolgpagina van dit blok
+          let part = 0
+          if(headH>0){ part += headH }
+          while(idx < rowHs.length && (part + rowHs[idx]) <= maxSliceCanvasH){
+            part += rowHs[idx]; idx++
+          }
+          // Als huidige pagina nog leeg is, neem dit deel; anders sluit vorige pagina af
+          if(curH>0){ slices.push({ start: curStart, height: curH }); curStart += curH; curH = 0 }
+          curH = part
+          // Als er nog rijen overblijven na vullen, sluit direct af en ga door
+          if(idx < rowHs.length){ slices.push({ start: curStart, height: curH }); curStart += curH; curH = 0 }
+        }
+      }
+    }
+    if(curH>0){ slices.push({ start: curStart, height: curH }) }
+
+    // Render elke slice als aparte pagina
+    for(let i=0;i<slices.length;i++){
+      const { start, height } = slices[i]
+      const partCanvas = document.createElement('canvas')
+      partCanvas.width = canvas.width
+      partCanvas.height = height
+      const ctx = partCanvas.getContext('2d')!
+      ctx.drawImage(canvas, 0, start, canvas.width, height, 0, 0, canvas.width, height)
+      const img = partCanvas.toDataURL('image/png')
+      const drawH = height * (pageW / canvas.width)
+      if(i===0){
+        doc.addImage(img, 'PNG', 0, 0, pageW, drawH)
+      }else{
+        doc.addPage('a4','landscape')
+        doc.addImage(img, 'PNG', 0, 0, pageW, drawH)
+      }
+    }
+    // Detailpagina's na de matrix
     for(const a of (plan.artifacts||[])){
       doc.addPage('a4','landscape')
       const wrap = document.createElement('div')
