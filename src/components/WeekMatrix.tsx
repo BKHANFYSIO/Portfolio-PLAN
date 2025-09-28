@@ -397,20 +397,6 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     return () => window.removeEventListener('resize', resize)
   }, [weeks.length])
 
-  // Maak expand/collapse bestuurbaar voor export: luister naar custom events
-  useEffect(()=>{
-    const onExpand = () => {
-      // Open alle EVL’s/secties
-      setOpen(Object.fromEntries(evlForCourse.map(b=>[b.id, true])))
-      setOpenCasus(true)
-      setOpenKennis(true)
-      // Forceer render zodat DOM volledig is vóór de export
-      setTimeout(()=> forceRerender(t=>t+1), 0)
-    }
-    window.addEventListener('wm-export-expand-all', onExpand as any)
-    return () => window.removeEventListener('wm-export-expand-all', onExpand as any)
-  }, [evlForCourse])
-
   useEffect(()=>{
     let syncing = false
     const w = wrapRef.current
@@ -1229,13 +1215,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
                   <KindIcon kind={a.kind} />
                   <strong style={{flex:1}}>{a.name}</strong>
-                  {(() => {
-                    const y = years.find(y=>y.year===plan.year)
-                    const info = y?.weeks.find(ww=> ww.week===a.week)
-                    const code = info?.code || info?.label || `W${a.week}`
-                    const date = info?.startISO ? new Date(info.startISO).toLocaleDateString('nl-NL') : ''
-                    return (<span className="muted">{code}{date ? ` · ${date}` : ''}</span>)
-                  })()}
+                  <span className="muted">Week {a.week}</span>
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:8}}>
                   <span className="sep" />
