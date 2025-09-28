@@ -290,40 +290,41 @@ export default function PlanDetail(){
       }
     }
 
-    // Sorteer segmenten op Y (veiligheid) en bouw paginaslices uit segmenten
+    // Sorteer segmenten en groepeer per pagina
     segments.sort((a,b)=> a.start - b.start)
-    type Slice = { start: number; height: number }
-    const slices: Slice[] = []
-    let pageStart = segments.length>0 ? segments[0].start : 0
-    let used = (headerCanvasH>0 ? headerCanvasH : 0)
-    let accH = 0
-
+    const pages: Segment[][] = []
+    let current: Segment[] = []
+    let used = headerCanvasH
     for(const seg of segments){
-      const segH = seg.height
-      if(used + segH <= maxSliceCanvasH){
-        used += segH
-        accH += segH
+      if(used + seg.height <= maxSliceCanvasH){
+        current.push(seg); used += seg.height
       }else{
-        // finalize huidige pagina
-        slices.push({ start: pageStart, height: accH + (headerCanvasH>0 && slices.length===0 ? headerCanvasH : 0) })
-        // start nieuwe pagina bij dit segment
-        pageStart = seg.start
-        used = (headerCanvasH>0 ? headerCanvasH : 0) + segH
-        accH = segH
+        if(current.length>0) pages.push(current)
+        current = [seg]; used = headerCanvasH + seg.height
       }
     }
-    if(accH>0){ slices.push({ start: pageStart, height: accH + (headerCanvasH>0 && slices.length===0 ? headerCanvasH : 0) }) }
+    if(current.length>0) pages.push(current)
 
-    // Render elke slice als aparte pagina
-    for(let i=0;i<slices.length;i++){
-      const { start, height } = slices[i]
-      const partCanvas = document.createElement('canvas')
-      partCanvas.width = canvas.width
-      partCanvas.height = height
-      const ctx = partCanvas.getContext('2d')!
-      ctx.drawImage(canvas, 0, start, canvas.width, height, 0, 0, canvas.width, height)
-      const img = partCanvas.toDataURL('image/png')
-      const drawH = height * (pageW / canvas.width)
+    // Render per pagina: header + segmenten
+    for(let i=0;i<pages.length;i++){
+      const segs = pages[i]
+      const totalH = headerCanvasH + segs.reduce((s,x)=> s + x.height, 0)
+      const pageCanvas = document.createElement('canvas')
+      pageCanvas.width = canvas.width
+      pageCanvas.height = totalH
+      const ctx = pageCanvas.getContext('2d')!
+      // Header bovenaan
+      if(headerCanvasH>0){
+        ctx.drawImage(canvas, 0, 0, canvas.width, headerCanvasH, 0, 0, canvas.width, headerCanvasH)
+      }
+      // Segmenten eronder
+      let dy = headerCanvasH
+      for(const seg of segs){
+        ctx.drawImage(canvas, 0, seg.start, canvas.width, seg.height, 0, dy, canvas.width, seg.height)
+        dy += seg.height
+      }
+      const img = pageCanvas.toDataURL('image/png')
+      const drawH = totalH * (pageW / canvas.width)
       if(i===0){
         doc.addImage(img, 'PNG', 0, 0, pageW, drawH)
       }else{
