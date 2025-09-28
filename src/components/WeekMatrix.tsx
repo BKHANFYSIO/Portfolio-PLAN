@@ -628,7 +628,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     return (
                       <div
                         className="vraak-bars"
-                        title={`V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`}
+                        title={[
+                          'VRAAK samenvatting (V variatie, R relevantie, A authenticiteit, Ac actualiteit, K kwantiteit).',
+                          'Klik voor meer details.',
+                          `V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`
+                        ].join('\n')}
                         role="button"
                         tabIndex={0}
                         onClick={(e)=>{ e.stopPropagation(); setVraakDetail({ title: `${block.id} · ${block.name}`, bars }) }}
@@ -754,7 +758,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                           <div
                             role="button"
                             tabIndex={0}
-                            title="Klik voor details"
+                            title={`VRAAK samenvatting van deze rij: totaal ${arts.length} bewijzen · ${data.kinds.length} soorten · ${data.persps.length} perspectieven.\nKlik voor meer details.`}
                             onClick={(e)=>{ e.stopPropagation(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) }}
                             onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) } }}
                           >
@@ -953,7 +957,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         <div
                           role="button"
                           tabIndex={0}
-                          title="Klik voor details"
+                          title={`VRAAK samenvatting van deze rij: totaal ${arts.length} bewijzen · ${data.kinds.length} soorten · ${data.persps.length} perspectieven.\nKlik voor meer details.`}
                           onClick={(e)=>{ e.stopPropagation(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) }}
                           onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) } }}
                         >
@@ -1128,7 +1132,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         <div
                           role="button"
                           tabIndex={0}
-                          title="Klik voor details"
+                          title={`VRAAK samenvatting van deze rij: totaal ${arts.length} bewijzen · ${data.kinds.length} soorten · ${data.persps.length} perspectieven.\nKlik voor meer details.`}
                           onClick={(e)=>{ e.stopPropagation(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) }}
                           onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) } }}
                         >
