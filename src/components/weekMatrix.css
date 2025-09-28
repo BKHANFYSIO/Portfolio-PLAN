@@ -87,6 +87,8 @@
 .wm-art--floating .icons-row{ flex-wrap:wrap; overflow:visible; white-space:normal }
 .wm-art--floating .name{ white-space:normal; overflow:visible; text-overflow:clip }
 .wm-art .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px }
+/* Zorg dat iconen en naam links staan en waardebalkje helemaal rechts uitlijnt */
+.wm-art .icons-row + .name{ margin-right: auto }
 
 /* Slider voor beheersingsniveau */
 /* Tegel-schuif voor beheersing */

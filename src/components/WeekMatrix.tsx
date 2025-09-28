@@ -1299,7 +1299,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 {(() => {
                   const s = countsDetail.kinds.length
                   const totalByKinds = countsDetail.kinds.reduce((acc, [,c])=> acc + (c||0), 0)
-                  return (<span><strong>{s}</strong> verschillende soorten · <strong>{totalByKinds}</strong> bewijzen</span>)
+                  return (<span><strong>{s}</strong> verschillende soorten · <strong>{totalByKinds}</strong> totaal</span>)
                 })()}
               </div>
               <div style={{display:'grid', gap:6}}>
@@ -1318,7 +1318,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 {(() => {
                   const s = countsDetail.persps.length
                   const totalByPersp = countsDetail.persps.reduce((acc, [,c])=> acc + (c||0), 0)
-                  return (<span><strong>{s}</strong> verschillende perspectieven · <strong>{totalByPersp}</strong> bewijzen</span>)
+                  return (<span><strong>{s}</strong> verschillende perspectieven · <strong>{totalByPersp}</strong> totaal</span>)
                 })()}
               </div>
               <div style={{display:'grid', gap:6}}>
