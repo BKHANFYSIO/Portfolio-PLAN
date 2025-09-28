@@ -234,6 +234,9 @@ export default function PlanDetail(){
   async function exportPdf(){
     const container = document.querySelector('.center') as HTMLElement | null
     if(!container) return
+    // Zorg dat alles uitgeklapt is vóór export
+    window.dispatchEvent(new Event('wm-export-expand-all'))
+    await new Promise(r=> setTimeout(r, 100))
     const wrap = container.querySelector('.wm-wrap') as HTMLElement | null
     // Forceer export-modus: sticky off, alles zichtbaar
     wrap?.classList.add('wm-export')
@@ -527,16 +530,14 @@ export default function PlanDetail(){
       {showPdfGuide && (
         <div className="dialog-backdrop" onClick={()=>setShowPdfGuide(false)}>
           <div className="dialog" onClick={e=>e.stopPropagation()}>
-            <h3>PDF export – beste resultaat</h3>
+            <h3>PDF export</h3>
             <ul>
-              <li>Zoom eerst zó in dat alle lesweken zichtbaar zijn in de matrix.</li>
-              <li>Sluit deze pop‑up en controleer of je echt alle kolommen ziet.</li>
-              <li>Is de tekst te klein? Kies “Exporteer in twee helften”.</li>
+              <li>De volledige matrix wordt automatisch over meerdere A4’s verdeeld.</li>
+              <li>Kolomkoppen (weken) worden per pagina herhaald voor leesbaarheid.</li>
             </ul>
             <div className="dialog-actions">
               <button className="file-label" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
-              <button className="file-label" onClick={exportPdfCurrentView}>PDF van huidige weergave</button>
-              <button className="btn" onClick={exportPdfHalves}>Exporteer in twee helften</button>
+              <button className="btn" onClick={exportPdfCurrentView}>Exporteer naar PDF</button>
             </div>
           </div>
         </div>

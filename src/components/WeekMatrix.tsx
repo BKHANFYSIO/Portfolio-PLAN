@@ -397,6 +397,20 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     return () => window.removeEventListener('resize', resize)
   }, [weeks.length])
 
+  // Maak expand/collapse bestuurbaar voor export: luister naar custom events
+  useEffect(()=>{
+    const onExpand = () => {
+      // Open alle EVL’s/secties
+      setOpen(Object.fromEntries(evlForCourse.map(b=>[b.id, true])))
+      setOpenCasus(true)
+      setOpenKennis(true)
+      // Forceer render zodat DOM volledig is vóór de export
+      setTimeout(()=> forceRerender(t=>t+1), 0)
+    }
+    window.addEventListener('wm-export-expand-all', onExpand as any)
+    return () => window.removeEventListener('wm-export-expand-all', onExpand as any)
+  }, [evlForCourse])
+
   useEffect(()=>{
     let syncing = false
     const w = wrapRef.current
