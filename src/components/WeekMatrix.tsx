@@ -1358,9 +1358,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                             <span className="sep" />
                             {(a.perspectives||[]).map(p => (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
                           </div>
-                          <div style={{display:'flex', alignItems:'center', gap:8}}>
+                          <div style={{display:'flex', alignItems:'center', gap:8, width:'100%', justifyContent:'space-between'}}>
                             <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1}}>{a.name}</span>
-                          <div className="bar" style={{position:'relative', width:14, height:36, background:'rgba(255,255,255,.10)', borderRadius:3, marginLeft:'auto', marginRight:4}}>
+                            <div className="bar" style={{position:'relative', width:14, height:36, background:'rgba(255,255,255,.10)', borderRadius:3, marginLeft:'auto'}}>
                             {(()=>{ const v=Math.max(1,Math.min(5, a.vraak?.authenticiteit||1)); const pct=((v-1)/4*100).toFixed(0)+'%';
                               const t=(v-1)/4; const hue=0+(120*t); const color=`hsl(${hue} 70% 45%)`;
                               const minPct = v<=1 ? '3%' : pct
