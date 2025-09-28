@@ -64,18 +64,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
 
   // removed unused kindIcon
 
-  function averageVraak(scores: {variatie:number;relevantie:number;authenticiteit:number;actualiteit:number;kwantiteit:number}[]){
-    if(scores.length===0) return '—'
-    const sum = scores.reduce((a,s)=>({
-      variatie:a.variatie+s.variatie,
-      relevantie:a.relevantie+s.relevantie,
-      authenticiteit:a.authenticiteit+s.authenticiteit,
-      actualiteit:a.actualiteit+s.actualiteit,
-      kwantiteit:a.kwantiteit+s.kwantiteit
-    }), {variatie:0,relevantie:0,authenticiteit:0,actualiteit:0,kwantiteit:0})
-    const avg = (sum.variatie+sum.relevantie+sum.authenticiteit+sum.actualiteit+sum.kwantiteit)/(scores.length*5)
-    return avg.toFixed(2)
-  }
+// (verwijderd: gemiddelde helper onnodig)
 
   // Bereken VRAAK-balken per verzameling artifacts en (optioneel) per-subrij ids
   function computeVraakBars(arts: Artifact[], subIds?: string[]): { v:number; r:number; a1:number; a2:number; k:number }{
@@ -115,6 +104,51 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     return { v,r,a1,a2,k }
   }
 
+  // Tellers-data en rendering voor subrijen
+  function computeCountersData(
+    arts: Artifact[],
+    knownKinds?: string[],
+    knownPersps?: string[]
+  ): { kinds: Array<[string, number]>; persps: Array<[string, number]> }{
+    if(!arts || arts.length===0) return { kinds: [], persps: [] }
+    const byKind = new Map<string, number>()
+    const byPersp = new Map<string, number>()
+    for(const a of arts){
+      const k = String(a.kind||'overig')
+      byKind.set(k, (byKind.get(k)||0)+1)
+      const ps = Array.isArray(a.perspectives) ? a.perspectives : []
+      if(ps.length===0){ byPersp.set('—', (byPersp.get('—')||0)+1) }
+      for(const p of ps){ byPersp.set(String(p), (byPersp.get(String(p))||0)+1) }
+    }
+    // Voeg bekende sleutels met 0 toe zodat alles zichtbaar is
+    for(const k of (knownKinds||[])){ if(!byKind.has(k)) byKind.set(k, 0) }
+    for(const p of (knownPersps||[])){ if(!byPersp.has(p)) byPersp.set(p, 0) }
+    const kinds = Array.from(byKind.entries()).sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]))
+    const persps = Array.from(byPersp.entries()).sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]))
+    return { kinds, persps }
+  }
+
+  // oude uitgebreide tellerweergave verwijderd
+
+  // Samenvatting: totaal, #soorten, #perspectieven
+  function renderSummaryCountersFromData(data: { kinds: Array<[string, number]>; persps: Array<[string, number]> }, total: number){
+    const kindCount = data.kinds.length
+    const perspCount = data.persps.length
+    const IconDoc = () => (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path stroke="currentColor" fill="none" strokeWidth="2" d="M6 2h9l3 3v17H6z"/></svg>
+    )
+    const IconPeople = () => (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke="currentColor" fill="none" strokeWidth="2"/><path stroke="currentColor" fill="none" strokeWidth="2" d="M2 20v-2c0-2.5 3-4.5 6-4.5M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM22 20v-2c0-2-2.4-3.8-5-4.3"/></svg>
+    )
+    return (
+      <div style={{display:'inline-flex',alignItems:'center',gap:10}}>
+        <button className="wm-chip" title="Totaal aantal bewijzen">{total}</button>
+        <span title="# verschillende soorten bewijs" style={{display:'inline-flex',alignItems:'center',gap:4}}><IconDoc /> <strong>{kindCount}</strong></span>
+        <span title="# verschillende perspectieven" style={{display:'inline-flex',alignItems:'center',gap:4}}><IconPeople /> <strong>{perspCount}</strong></span>
+      </div>
+    )
+  }
+
   const wrapRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const hScrollRef = useRef<HTMLDivElement>(null)
@@ -130,6 +164,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const viewBtnRef = useRef<HTMLButtonElement|null>(null)
   const viewPopRef = useRef<HTMLDivElement|null>(null)
   const [viewTop, setViewTop] = useState<number>(0)
+  const [vraakDetail, setVraakDetail] = useState<null | { title: string; bars: { v:number;r:number;a1:number;a2:number;k:number } }>(null)
+  const [countsDetail, setCountsDetail] = useState<null | { title: string; kinds: Array<[string, number]>; persps: Array<[string, number]>; items: Artifact[] }>(null)
   // Weergave-instellingen
   const uiPref = readJson<Record<string, any>>(LS_KEYS.ui, {})
   const [compact, setCompact] = useState<boolean>(uiPref?.compact ?? false)
@@ -146,6 +182,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   const artifactsAll = (plan.artifacts||[])
   const allKinds = useMemo(()=> Array.from(new Set(artifactsAll.map(a=> String(a.kind||'').trim()).filter(Boolean))), [artifactsAll])
   const allPersps = useMemo(()=> Array.from(new Set(artifactsAll.flatMap(a=> Array.isArray(a.perspectives)?a.perspectives:[]).filter(Boolean))), [artifactsAll])
+  // Bekende sets voor volledige weergave, inclusief categorieën die (nog) 0 keer voorkomen
+  // (verwijderd: vaste lijsten niet meer nodig voor huidige samenvatting)
   const [filterKinds, setFilterKinds] = useState<string[]>(Array.isArray(uiPref?.filterKinds)?uiPref.filterKinds:[])
   const [filterPersp, setFilterPersp] = useState<string[]>(Array.isArray(uiPref?.filterPersp)?uiPref.filterPersp:[])
   const [filterMode, setFilterMode] = useState<'dim'|'hide'>(uiPref?.filterMode==='hide'?'hide':'dim')
@@ -279,6 +317,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
   // Preview modal state
   const [preview, setPreview] = useState<{ title: string; artifacts: Artifact[] } | null>(null)
   function openPreview(arts: Artifact[], title: string){
+    // Laat onderliggende VRAAK/Details-popups open; toon preview erboven
     setPreview({ title, artifacts: arts })
   }
   useEffect(()=>{
@@ -555,7 +594,13 @@ export default function WeekMatrix({ plan, onEdit }: Props){
             })}
           </div>
           <div className="wm-vcol sticky-right offset-r2">VRAAK</div>
-          <div className="wm-scol sticky-right">Beheersing</div>
+          <div className="wm-scol sticky-right" title={
+            [
+              'Zelfinschatting van eigen beheersing (1–5).',
+              'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
+              'Op EVL- en categorie-rijen wordt automatisch het gemiddelde getoond.'
+            ].join('\n')
+          }>Beheersing</div>
         </div>
         <div className="wm-body">
           {evlForCourse.map(block => (
@@ -581,7 +626,14 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const bars = computeVraakBars(arts, outcomeIds)
                     const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
                     return (
-                      <div className="vraak-bars" title={`V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`}>
+                      <div
+                        className="vraak-bars"
+                        title={`V:${bars.v.toFixed(1)} R:${bars.r.toFixed(1)} A:${bars.a1.toFixed(1)} Ac:${bars.a2.toFixed(1)} K:${bars.k.toFixed(1)}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e)=>{ e.stopPropagation(); setVraakDetail({ title: `${block.id} · ${block.name}`, bars }) }}
+                        onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setVraakDetail({ title: `${block.id} · ${block.name}`, bars }) } }}
+                      >
                         {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> (
                           <div key={i} className="bar"><div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} /><div className="lbl">{lbl}</div></div>
                         ))}
@@ -598,7 +650,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                       const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                       return (
-                        <div className="self-tile" aria-hidden title={`Gemiddeld: ${avg.toFixed(1)}`} style={{ background: colorFor(avg) }}>
+                        <div className="self-tile" aria-hidden title={[
+                          'Gemiddelde van je eigen scores over de leeruitkomsten binnen deze EVL.',
+                          "Gebruik de knop 'reset' om de zelf gescoorde beheersing voor deze EVL te wissen.",
+                          `Gemiddeld: ${avg.toFixed(1)}`
+                        ].join('\n')} style={{ background: colorFor(avg) }}>
                           <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                           <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                             setSelfLevels(cur=>{ const next={...cur}; for(const id of outcomeIds) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
@@ -692,7 +748,19 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     {
                       (()=>{
                         const arts = (plan.artifacts||[]).filter(a => weeks.includes(a.week) && a.evlOutcomeIds.includes(o.id))
-                        return averageVraak(arts.map(a=>a.vraak))
+                        const data = computeCountersData(arts)
+                        const title = `${o.id} · ${(outcomeNameById.get(o.id)||'')}`.trim()
+                        return (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            title="Klik voor details"
+                            onClick={(e)=>{ e.stopPropagation(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) }}
+                            onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) } }}
+                          >
+                            <div style={{display:'flex',justifyContent:'center'}}>{renderSummaryCountersFromData(data, arts.length)}</div>
+                          </div>
+                        )
                       })()
                     }
                   </div>
@@ -738,7 +806,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                           onPointerDown={onDown}
                           onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
                           onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
-                          title={`Beheersing: ${current||1}/5`}
+                          title={[
+                            'Zelfinschatting van eigen beheersing (1–5).',
+                            'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
+                            `Huidig: ${current||1}/5`
+                          ].join('\n')}
                         >
                           <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
                           <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
@@ -786,7 +858,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                     const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                     return (
-                      <div className="self-tile" aria-hidden title={`Gemiddeld: ${avg.toFixed(1)}`} style={{ background: colorFor(avg) }}>
+                      <div className="self-tile" aria-hidden title={[
+                        'Gemiddelde van je eigen scores over de subcategorieën binnen deze sectie.',
+                        "Gebruik de knop 'reset' om de zelf gescoorde beheersing voor deze categorie te wissen.",
+                        `Gemiddeld: ${avg.toFixed(1)}`
+                      ].join('\n')} style={{ background: colorFor(avg) }}>
                         <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                         <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                           setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
@@ -871,7 +947,19 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {
                     (()=>{
                       const arts = (plan.artifacts||[]).filter(a => weeks.includes(a.week) && a.caseIds.includes(c.id))
-                      return averageVraak(arts.map(a=>a.vraak))
+                      const data = computeCountersData(arts)
+                      const title = c.name
+                      return (
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          title="Klik voor details"
+                          onClick={(e)=>{ e.stopPropagation(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) }}
+                          onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) } }}
+                        >
+                          <div style={{display:'flex',justifyContent:'center'}}>{renderSummaryCountersFromData(data, arts.length)}</div>
+                        </div>
+                      )
                     })()
                   }
                 </div>
@@ -911,7 +999,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         onPointerDown={onDown}
                         onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
                         onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
-                        title={`Beheersing: ${current||1}/5`}
+                        title={[
+                          'Zelfinschatting van eigen beheersing (1–5).',
+                          'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
+                          `Huidig: ${current||1}/5`
+                        ].join('\n')}
                       >
                         <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
                         <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
@@ -959,7 +1051,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                     const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                     return (
-                      <div className="self-tile" aria-hidden title={`Gemiddeld: ${avg.toFixed(1)}`} style={{ background: colorFor(avg) }}>
+                      <div className="self-tile" aria-hidden title={[
+                        'Gemiddelde van je eigen scores over de subcategorieën binnen deze sectie.',
+                        "Gebruik de knop 'reset' om de zelf gescoorde beheersing voor deze categorie te wissen.",
+                        `Gemiddeld: ${avg.toFixed(1)}`
+                      ].join('\n')} style={{ background: colorFor(avg) }}>
                         <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                         <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                           setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
@@ -1026,7 +1122,19 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {
                     (()=>{
                       const arts = (plan.artifacts||[]).filter(a => weeks.includes(a.week) && a.knowledgeIds.includes(k.id))
-                      return averageVraak(arts.map(a=>a.vraak))
+                      const data = computeCountersData(arts)
+                      const title = k.name
+                      return (
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          title="Klik voor details"
+                          onClick={(e)=>{ e.stopPropagation(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) }}
+                          onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setCountsDetail({ title, kinds: data.kinds, persps: data.persps, items: arts }) } }}
+                        >
+                          <div style={{display:'flex',justifyContent:'center'}}>{renderSummaryCountersFromData(data, arts.length)}</div>
+                        </div>
+                      )
                     })()
                   }
                 </div>
@@ -1066,7 +1174,11 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         onPointerDown={onDown}
                         onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
                         onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
-                        title={`Beheersing: ${current||1}/5`}
+                        title={[
+                          'Zelfinschatting van eigen beheersing (1–5).',
+                          'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
+                          `Huidig: ${current||1}/5`
+                        ].join('\n')}
                       >
                         <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
                         <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
@@ -1087,7 +1199,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
       </div>
     </div>
     {preview && (
-      <div className="wm-preview-backdrop" onClick={()=> setPreview(null)}>
+      <div className="wm-preview-backdrop" style={{zIndex:3000}} onClick={()=> setPreview(null)}>
         <div className="wm-preview" onClick={(e)=> e.stopPropagation()}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
             <h3 style={{margin:'6px 0'}}>{preview!.title}</h3>
@@ -1125,6 +1237,145 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    )}
+    {vraakDetail && (
+      <div className="wm-preview-backdrop" onClick={()=> setVraakDetail(null)}>
+        <div className="wm-preview" onClick={(e)=> e.stopPropagation()}>
+          <div className="wm-modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
+            <h3 style={{margin:'6px 0'}}>VRAAK – {vraakDetail.title}</h3>
+            <button className="wm-smallbtn" onClick={()=> setVraakDetail(null)}>Sluiten</button>
+          </div>
+          <div className="vraak-bars" style={{height:220, display:'flex', alignItems:'flex-end', justifyContent:'center', gap:12, padding:'0 2px'}}>
+            {(()=>{
+              const bars = vraakDetail.bars
+              const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
+              return (
+                <>
+                  {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> (
+                    <div key={i} className="bar" style={{height:'100%', width:22}}>
+                      <div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} />
+                      <div className="lbl">{lbl}</div>
+                    </div>
+                  ))}
+                </>
+              )
+            })()}
+          </div>
+          <div style={{marginTop:10}}>
+            <ul className="muted" style={{lineHeight:1.5}}>
+              <li><strong>V – Variatie</strong>: mix van soorten bewijs, perspectieven en spreiding over de tijdspanne van het portfolio.</li>
+              <li><strong>R – Relevantie</strong>: gemiddelde van je eigen relevantiescores.</li>
+              <li><strong>A – Authenticiteit</strong>: hoogste authenticiteit over subonderdelen of gemiddeld per rij.</li>
+              <li><strong>A – Actualiteit</strong>: recenter bewijs weegt zwaarder.</li>
+              <li><strong>K – Kwantiteit</strong>: aantal bewijzen ten opzichte van een richtwaarde.</li>
+            </ul>
+            <div className="muted" style={{fontSize:12, marginTop:8}}>
+              Deze VRAAK‑scores zijn indicatief en afhankelijk van je eigen inschatting per toegevoegd bewijsstuk.
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    {countsDetail && (
+      <div className="wm-preview-backdrop" onClick={()=> setCountsDetail(null)}>
+        <div className="wm-preview" onClick={(e)=> e.stopPropagation()}>
+          <div className="wm-modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
+            <h3 style={{margin:'6px 0'}}>Details – {countsDetail.title.replace(/^.*?·\s*/, '')}</h3>
+            <button className="wm-smallbtn" onClick={()=> setCountsDetail(null)}>Sluiten</button>
+          </div>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, margin:'6px 0 10px'}}>
+            {(()=>{
+              const total = (countsDetail.items||[]).length
+              return renderSummaryCountersFromData({ kinds: countsDetail.kinds, persps: countsDetail.persps }, total)
+            })()}
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16}}>
+            <div>
+              <h4 style={{margin:'6px 0'}}>Soorten bewijs</h4>
+              <div className="muted" style={{marginBottom:6}}>
+                {(() => {
+                  const s = countsDetail.kinds.length
+                  const totalByKinds = countsDetail.kinds.reduce((acc, [,c])=> acc + (c||0), 0)
+                  return (<span><strong>{s}</strong> verschillende soorten · <strong>{totalByKinds}</strong> bewijzen</span>)
+                })()}
+              </div>
+              <div style={{display:'grid', gap:6}}>
+                {countsDetail.kinds.length===0 ? (<span className="muted">—</span>) : countsDetail.kinds.map(([k,c])=> (
+                  <div key={k} style={{display:'flex', alignItems:'center', gap:8}}>
+                    <KindIcon kind={k} />
+                    <span style={{flex:1}}>{k}</span>
+                    <strong>{c}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 style={{margin:'6px 0'}}>Perspectieven</h4>
+              <div className="muted" style={{marginBottom:6}}>
+                {(() => {
+                  const s = countsDetail.persps.length
+                  const totalByPersp = countsDetail.persps.reduce((acc, [,c])=> acc + (c||0), 0)
+                  return (<span><strong>{s}</strong> verschillende perspectieven · <strong>{totalByPersp}</strong> bewijzen</span>)
+                })()}
+              </div>
+              <div style={{display:'grid', gap:6}}>
+                {countsDetail.persps.length===0 ? (<span className="muted">—</span>) : countsDetail.persps.map(([p,c])=> (
+                  <div key={p} style={{display:'flex', alignItems:'center', gap:8}}>
+                    <PerspectiveIcon p={p as any} />
+                    <span style={{flex:1}}>{p}</span>
+                    <strong>{c}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{marginTop:12}}>
+            <h4 style={{margin:'6px 0'}}>Bewijsstukken per lesweek</h4>
+            <div className="muted" style={{marginBottom:6}}>
+              {(() => { const total = (countsDetail.items||[]).length; return (<span><strong>{total}</strong> bewijzen in deze rij</span>) })()}
+            </div>
+            <div style={{display:'grid', gap:8}}>
+              {(() => {
+                const byWeek = new Map<number, Artifact[]>()
+                for(const a of (countsDetail.items||[])){
+                  const arr = byWeek.get(a.week) || []
+                  arr.push(a)
+                  byWeek.set(a.week, arr)
+                }
+                const entries = Array.from(byWeek.entries()).sort((a,b)=> a[0]-b[0])
+                if(entries.length===0) return (<div className="muted">—</div>)
+                return entries.map(([w, list]) => (
+                  <div key={w} style={{border:'1px solid var(--line-strong)', borderRadius:8, padding:8, background:'var(--surface2)'}}>
+                    <div style={{fontWeight:600, marginBottom:6}}>Week {w}</div>
+                    <div style={{display:'grid', gap:6}}>
+                      {list.map(a => (
+                        <button key={a.id} className="wm-art" style={{['--kind-color' as any]: colorForKind(a.kind)}} onClick={()=> openPreview([a], a.name)}>
+                          <div className="icons-row">
+                            <span title={String(a.kind||'')}><KindIcon kind={a.kind} /></span>
+                            <span className="sep" />
+                            {(a.perspectives||[]).map(p => (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
+                          </div>
+                          <div style={{display:'flex', alignItems:'center', gap:8}}>
+                            <span className="name" title={a.name} style={{display:'inline-block', maxWidth:'100%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1}}>{a.name}</span>
+                          <div className="bar" style={{position:'relative', width:14, height:36, background:'rgba(255,255,255,.10)', borderRadius:3, marginLeft:'auto', marginRight:4}}>
+                            {(()=>{ const v=Math.max(1,Math.min(5, a.vraak?.authenticiteit||1)); const pct=((v-1)/4*100).toFixed(0)+'%';
+                              const t=(v-1)/4; const hue=0+(120*t); const color=`hsl(${hue} 70% 45%)`;
+                              const minPct = v<=1 ? '3%' : pct
+                              return (
+                                <div className="fill" style={{position:'absolute', left:0, right:0, bottom:0, height: minPct, background:color, borderRadius:3}} title={`Authenticiteit: ${v}/5`} />
+                              )})()}
+                          </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
           </div>
         </div>
       </div>

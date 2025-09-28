@@ -101,8 +101,11 @@
 .self-tile:focus{ outline:2px solid var(--primary) }
 
 /* Preview popup */
-.wm-preview-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000 }
-.wm-preview{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; width:min(640px,92vw); max-height:80vh; overflow:auto; padding:12px }
+.wm-preview-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:2500 }
+.wm-preview{ background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; width:min(760px,92vw); max-height:86vh; overflow:auto; padding:12px }
+.wm-modal-header{ position:sticky; top:0; background:var(--surface); z-index:5; padding-bottom:6px; box-shadow: 0 6px 8px -6px rgba(0,0,0,.25) }
+/* Zorg dat de bewerk-popup boven alle andere overlays komt */
+.dialog-backdrop{ z-index: 3000 }
 .wm-vbars{ display:grid; grid-template-columns:100px 1fr; gap:6px; align-items:center }
 .wm-vbar{ height:8px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden }
 .wm-vbar .fill{ height:100%; background:var(--primary) }
