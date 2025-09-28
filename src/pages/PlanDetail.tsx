@@ -247,91 +247,88 @@ export default function PlanDetail(){
     const prevScrollTop = wrap?.scrollTop || 0
     if(wrap){ wrap.scrollLeft = 0; wrap.scrollTop = 0 }
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2, windowWidth: container.scrollWidth, windowHeight: container.scrollHeight })
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
-    const scale = canvas.width / container.scrollWidth
-    // Maximale canvas-hoogte die op één A4 past bij breedte=pageW
-    const maxSliceCanvasH = Math.floor(canvas.width * (pageH / pageW))
+    // Nieuwe, robuuste compositie: bouw elke pagina als aparte DOM en render die
+    const compW = container.scrollWidth
+    const maxDomH = Math.floor(compW * (pageH / pageW))
 
     // Bepaal blokken (EVL/categorieën) uit de wm-body, zodat we nooit binnen een blok breken
     const body = container.querySelector('.wm-body') as HTMLElement | null
     const header = container.querySelector('.wm-header') as HTMLElement | null
-    const headerCanvasH = Math.floor((header?.offsetHeight || 0) * scale)
-    const blocksAll = Array.from((body?.children || []) as any as HTMLElement[])
-    // Kies alléén echte blokcontainers (die een .wm-evlhead binnen zich hebben)
-    const blocks = blocksAll.filter(el => !!el.querySelector('.wm-evlhead'))
+    const blocks = Array.from((body?.children || []) as any as HTMLElement[]).filter(el => !!el.querySelector('.wm-evlhead'))
 
-    // Helper: DOM‑rect naar canvas‑Y in px (absoluut vanaf container‑top)
-    const contRect = container.getBoundingClientRect()
-    const toCanvasY = (el: HTMLElement) => Math.floor((el.getBoundingClientRect().top - contRect.top) * scale)
-    const toCanvasH = (el: HTMLElement) => Math.floor(el.getBoundingClientRect().height * scale)
+    const makePage = () => {
+      const page = document.createElement('div')
+      page.style.position = 'absolute'
+      page.style.left = '-10000px'
+      page.style.top = '0'
+      page.style.width = compW + 'px'
+      page.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
+      if(header){ page.appendChild(header.cloneNode(true)) }
+      document.body.appendChild(page)
+      return page
+    }
 
-    // Verzamel onbreekbare segmenten per blok; blok > 1 pagina → splits in complete subrijen
-    type Segment = { start: number; height: number }
-    const segments: Segment[] = []
+    let pages: HTMLElement[] = []
+    let page = makePage()
+    const finalizePage = async (first:boolean) => {
+      const c = await html2canvas(page, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+      const img = c.toDataURL('image/png')
+      const drawH = c.height * (pageW / c.width)
+      if(first){ doc.addImage(img, 'PNG', 0, 0, pageW, drawH) } else { doc.addPage('a4','landscape'); doc.addImage(img, 'PNG', 0, 0, pageW, drawH) }
+      document.body.removeChild(page)
+    }
+
+    let first = true
+    const fits = (el: HTMLElement) => { page.appendChild(el); const ok = page.scrollHeight <= maxDomH; page.removeChild(el); return ok }
+
     for(const block of blocks){
-      const bStart = toCanvasY(block)
-      const bH = toCanvasH(block)
-      if(bH <= maxSliceCanvasH){
-        segments.push({ start: bStart, height: bH })
+      const clone = block.cloneNode(true) as HTMLElement
+      if(fits(clone)){
+        page.appendChild(clone)
       }else{
-        const head = block.querySelector('.wm-evlhead') as HTMLElement | null
+        // start nieuwe pagina als huidige al content heeft
+        if(page.children.length>0){ await finalizePage(first); first=false; page = makePage() }
+        // Pass één: probeer volledig blok op lege pagina
+        if(fits(clone)){
+          page.appendChild(clone)
+          continue
+        }
+        // Pass twee: split op rij‑niveau met herhaalde evl‑kop
+        const part = document.createElement('div')
+        const head = block.querySelector('.wm-evlhead')
+        if(head) part.appendChild(head.cloneNode(true))
         const rows = Array.from(block.querySelectorAll('.wm-row')) as HTMLElement[]
-        let start = bStart
-        if(head){
-          const h = toCanvasH(head)
-          segments.push({ start, height: h })
-          start += h
+        let idx = 0
+        while(idx < rows.length){
+          const r = rows[idx].cloneNode(true) as HTMLElement
+          part.appendChild(r)
+          if(fits(part)){
+            // past nog
+            idx++
+          }else{
+            // finalize pagina zonder laatste rij
+            part.removeChild(r)
+            page.appendChild(part)
+            await finalizePage(first); first=false; page = makePage()
+            // nieuwe part met kop voor vervolg
+            const newPart = document.createElement('div')
+            if(head) newPart.appendChild(head.cloneNode(true))
+            newPart.appendChild(r)
+            // start met r al toegevoegd (past sowieso op lege pagina, anders is rij hoger dan pagina)
+            part.innerHTML = newPart.innerHTML
+            idx++
+          }
+          // Als laatste rij verwerkt → append op pagina
+          if(idx===rows.length){ page.appendChild(part) }
         }
-        for(const row of rows){
-          segments.push({ start: toCanvasY(row), height: toCanvasH(row) })
-        }
       }
+      // als blok toegevoegd en pagina vol raakt voor volgend blok, finalize later
+      if(page.scrollHeight > maxDomH){ await finalizePage(first); first=false; page = makePage() }
     }
-
-    // Sorteer segmenten en groepeer per pagina
-    segments.sort((a,b)=> a.start - b.start)
-    const pages: Segment[][] = []
-    let current: Segment[] = []
-    let used = headerCanvasH
-    for(const seg of segments){
-      if(used + seg.height <= maxSliceCanvasH){
-        current.push(seg); used += seg.height
-      }else{
-        if(current.length>0) pages.push(current)
-        current = [seg]; used = headerCanvasH + seg.height
-      }
-    }
-    if(current.length>0) pages.push(current)
-
-    // Render per pagina: header + segmenten
-    for(let i=0;i<pages.length;i++){
-      const segs = pages[i]
-      const totalH = headerCanvasH + segs.reduce((s,x)=> s + x.height, 0)
-      const pageCanvas = document.createElement('canvas')
-      pageCanvas.width = canvas.width
-      pageCanvas.height = totalH
-      const ctx = pageCanvas.getContext('2d')!
-      // Header bovenaan
-      if(headerCanvasH>0){
-        ctx.drawImage(canvas, 0, 0, canvas.width, headerCanvasH, 0, 0, canvas.width, headerCanvasH)
-      }
-      // Segmenten eronder
-      let dy = headerCanvasH
-      for(const seg of segs){
-        ctx.drawImage(canvas, 0, seg.start, canvas.width, seg.height, 0, dy, canvas.width, seg.height)
-        dy += seg.height
-      }
-      const img = pageCanvas.toDataURL('image/png')
-      const drawH = totalH * (pageW / canvas.width)
-      if(i===0){
-        doc.addImage(img, 'PNG', 0, 0, pageW, drawH)
-      }else{
-        doc.addPage('a4','landscape')
-        doc.addImage(img, 'PNG', 0, 0, pageW, drawH)
-      }
-    }
+    // finalize laatste pagina
+    if(page){ await finalizePage(first) }
     // Detailpagina's na de matrix
     const yearsLocal = getYears()
     for(const a of (plan.artifacts||[])){
