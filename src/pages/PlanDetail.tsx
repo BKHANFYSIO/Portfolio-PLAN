@@ -259,57 +259,60 @@ export default function PlanDetail(){
     const header = container.querySelector('.wm-header') as HTMLElement | null
     const headerCanvasH = Math.floor((header?.offsetHeight || 0) * scale)
     const blocksAll = Array.from((body?.children || []) as any as HTMLElement[])
-    // Filter alleen EVL-groepen en secties (kop + rijen) als blokken
-    const blocks = blocksAll.filter(el => el.querySelector('.wm-evlhead') || el.classList.contains('wm-row'))
+    // Kies alléén echte blokcontainers (die een .wm-evlhead binnen zich hebben)
+    const blocks = blocksAll.filter(el => !!el.querySelector('.wm-evlhead'))
 
-    // Helper: hoogte in canvas-px van een element
-    const toC = (px:number)=> Math.floor(px * scale)
+    // Helper: DOM‑rect naar canvas‑Y in px (absoluut vanaf container‑top)
+    const contRect = container.getBoundingClientRect()
+    const toCanvasY = (el: HTMLElement) => Math.floor((el.getBoundingClientRect().top - contRect.top) * scale)
+    const toCanvasH = (el: HTMLElement) => Math.floor(el.getBoundingClientRect().height * scale)
 
-    // Stel pagina-slices samen op canvas-coördinaten (startY, height)
-    type Slice = { start: number; height: number }
-    const slices: Slice[] = []
-    let curStart = 0
-    let curH = 0
-
-    // Neem header mee op de eerste pagina
-    if(headerCanvasH>0){ curH += headerCanvasH }
-
+    // Verzamel onbreekbare segmenten per blok; blok > 1 pagina → splits in complete subrijen
+    type Segment = { start: number; height: number }
+    const segments: Segment[] = []
     for(const block of blocks){
-      const blockH = toC(block.offsetHeight)
-      const fitsInEmpty = blockH <= maxSliceCanvasH
-      const hasSpace = (curH + blockH) <= maxSliceCanvasH
-      if(hasSpace){
-        curH += blockH
-        continue
-      }
-      // Als huidige pagina iets bevat → finalizeer en start nieuwe
-      if(curH>0){ slices.push({ start: curStart, height: curH }); curStart += curH; curH = 0 }
-      // Past het blok op een lege pagina? Dan plaats het in één keer, anders splits op rijen
-      if(fitsInEmpty){
-        curH = blockH
+      const bStart = toCanvasY(block)
+      const bH = toCanvasH(block)
+      if(bH <= maxSliceCanvasH){
+        segments.push({ start: bStart, height: bH })
       }else{
-        // Splits op subrijen binnen dit blok (evlhead + .wm-row)
         const head = block.querySelector('.wm-evlhead') as HTMLElement | null
-        const headH = toC(head?.offsetHeight || 0)
         const rows = Array.from(block.querySelectorAll('.wm-row')) as HTMLElement[]
-        const rowHs = rows.map(r => toC(r.offsetHeight))
-        let idx = 0
-        while(idx < rowHs.length){
-          // Start met (optionele) evlhead op elke vervolgpagina van dit blok
-          let part = 0
-          if(headH>0){ part += headH }
-          while(idx < rowHs.length && (part + rowHs[idx]) <= maxSliceCanvasH){
-            part += rowHs[idx]; idx++
-          }
-          // Als huidige pagina nog leeg is, neem dit deel; anders sluit vorige pagina af
-          if(curH>0){ slices.push({ start: curStart, height: curH }); curStart += curH; curH = 0 }
-          curH = part
-          // Als er nog rijen overblijven na vullen, sluit direct af en ga door
-          if(idx < rowHs.length){ slices.push({ start: curStart, height: curH }); curStart += curH; curH = 0 }
+        let start = bStart
+        if(head){
+          const h = toCanvasH(head)
+          segments.push({ start, height: h })
+          start += h
+        }
+        for(const row of rows){
+          segments.push({ start: toCanvasY(row), height: toCanvasH(row) })
         }
       }
     }
-    if(curH>0){ slices.push({ start: curStart, height: curH }) }
+
+    // Sorteer segmenten op Y (veiligheid) en bouw paginaslices uit segmenten
+    segments.sort((a,b)=> a.start - b.start)
+    type Slice = { start: number; height: number }
+    const slices: Slice[] = []
+    let pageStart = segments.length>0 ? segments[0].start : 0
+    let used = (headerCanvasH>0 ? headerCanvasH : 0)
+    let accH = 0
+
+    for(const seg of segments){
+      const segH = seg.height
+      if(used + segH <= maxSliceCanvasH){
+        used += segH
+        accH += segH
+      }else{
+        // finalize huidige pagina
+        slices.push({ start: pageStart, height: accH + (headerCanvasH>0 && slices.length===0 ? headerCanvasH : 0) })
+        // start nieuwe pagina bij dit segment
+        pageStart = seg.start
+        used = (headerCanvasH>0 ? headerCanvasH : 0) + segH
+        accH = segH
+      }
+    }
+    if(accH>0){ slices.push({ start: pageStart, height: accH + (headerCanvasH>0 && slices.length===0 ? headerCanvasH : 0) }) }
 
     // Render elke slice als aparte pagina
     for(let i=0;i<slices.length;i++){
