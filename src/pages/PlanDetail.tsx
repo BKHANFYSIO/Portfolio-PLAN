@@ -236,6 +236,8 @@ export default function PlanDetail(){
     if(!container) return
     // Zorg dat alles uitgeklapt is vóór export
     window.dispatchEvent(new Event('wm-export-expand-all'))
+    // Zet years tijdelijk op window, zodat PDF‑template bij detailpagina’s weekcode/datum kan tonen
+    ;(window as any).__pfYears = getYears()
     await new Promise(r=> setTimeout(r, 100))
     const wrap = container.querySelector('.wm-wrap') as HTMLElement | null
     // Forceer export-modus: sticky off, alles zichtbaar
@@ -333,7 +335,7 @@ export default function PlanDetail(){
       wrap.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
       wrap.innerHTML = `
         <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">${(()=>{ const y = (window as any).__pfYears; const info = Array.isArray(y)? y.find((yy:any)=>yy.year===${plan.year})?.weeks.find((ww:any)=> ww.week===${a.week}) : null; const code = info?.code || info?.label || 'Week ${a.week}'; const date = info?.startISO || ''; return `${code}${date?` · ${date}`:''}` })()} · Soort: ${a.kind||'—'}</div>
         <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
           <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
           <div>Casus / Thema</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>

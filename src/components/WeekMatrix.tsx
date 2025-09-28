@@ -1229,7 +1229,13 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
                   <KindIcon kind={a.kind} />
                   <strong style={{flex:1}}>{a.name}</strong>
-                  <span className="muted">Week {a.week}</span>
+                  {(() => {
+                    const y = years.find(y=>y.year===plan.year)
+                    const info = y?.weeks.find(ww=> ww.week===a.week)
+                    const code = info?.code || info?.label || `W${a.week}`
+                    const date = info?.startISO ? new Date(info.startISO).toLocaleDateString('nl-NL') : ''
+                    return (<span className="muted">{code}{date ? ` · ${date}` : ''}</span>)
+                  })()}
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:8}}>
                   <span className="sep" />
