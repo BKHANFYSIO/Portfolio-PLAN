@@ -327,6 +327,11 @@ export default function PlanDetail(){
     await capturePage(page, first); document.body.removeChild(page)
     // Detailpagina's na de matrix
     for(const a of (plan.artifacts||[])){
+      const yrs = getYears()
+      const info = yrs.find(y=>y.year===plan.year)?.weeks.find(ww=> ww.week===a.week)
+      const code = info?.code || info?.label || `Week ${a.week}`
+      const date = info?.startISO || ''
+      const weekText = date ? `${code} · ${date}` : code
       doc.addPage('a4','landscape')
       const wrap = document.createElement('div')
       wrap.style.width = '1000px'
@@ -334,7 +339,7 @@ export default function PlanDetail(){
       wrap.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
       wrap.innerHTML = `
         <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">${(()=>{ const y = (window as any).__pfYears; const info = Array.isArray(y)? y.find((yy:any)=>yy.year===${plan.year})?.weeks.find((ww:any)=> ww.week===${a.week}) : null; const code = info?.code || info?.label || 'Week ${a.week}'; const date = info?.startISO || ''; return `${code}${date?` · ${date}`:''}` })()} · Soort: ${a.kind||'—'}</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">${weekText} · Soort: ${a.kind||'—'}</div>
         <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
           <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
           <div>Casus / Thema</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
