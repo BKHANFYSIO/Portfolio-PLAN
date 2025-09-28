@@ -647,7 +647,10 @@ export default function PlanDetail(){
       {editArtifactId && (
         <div className="modal-backdrop" onClick={()=>setEditArtifactId(null)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3>Bewijsstuk bewerken</h3>
+            <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>Bewijsstuk bewerken</h3>
+              <button className="wm-smallbtn" aria-label="Sluiten" onClick={()=>setEditArtifactId(null)}>Sluiten</button>
+            </div>
             <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
               <label><span>Naam</span><input value={editArtifactName} onChange={e=>setEditArtifactName(e.target.value)} /></label>
               <label><span>Week</span>
