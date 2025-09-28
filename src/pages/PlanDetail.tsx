@@ -234,8 +234,15 @@ export default function PlanDetail(){
   async function exportPdf(){
     const container = document.querySelector('.center') as HTMLElement | null
     if(!container) return
+    const wrap = container.querySelector('.wm-wrap') as HTMLElement | null
+    // Forceer export-modus: sticky off, alles zichtbaar
+    wrap?.classList.add('wm-export')
+    // Bewaar en reset scrollposities zodat alles in beeld is
+    const prevScrollLeft = wrap?.scrollLeft || 0
+    const prevScrollTop = wrap?.scrollTop || 0
+    if(wrap){ wrap.scrollLeft = 0; wrap.scrollTop = 0 }
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2, windowWidth: container.scrollWidth, windowHeight: container.scrollHeight })
     const img = canvas.toDataURL('image/png')
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
@@ -275,6 +282,8 @@ export default function PlanDetail(){
       document.body.removeChild(wrap)
     }
     doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
+    // Herstel state
+    if(wrap){ wrap.classList.remove('wm-export'); wrap.scrollLeft = prevScrollLeft; wrap.scrollTop = prevScrollTop }
   }
 
   // Verwijderd auto-open via query; popup verschijnt alleen via knop

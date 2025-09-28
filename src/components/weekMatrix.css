@@ -1,4 +1,10 @@
 .wm-wrap{ margin-top:16px; overflow-y:auto; overflow-x:hidden; border:1px solid rgba(255,255,255,.1); border-radius:12px; width:100%; height:100%; max-height:unset; position:relative; padding-bottom:12px; min-height:0; flex:1; touch-action: pan-y }
+/* Export-modus: toon volledige tabel zonder sticky/scroll */
+.wm-wrap.wm-export{ overflow: visible; height:auto; padding-bottom:0 }
+.wm-wrap.wm-export .wm-header{ position:static; box-shadow:none }
+.wm-wrap.wm-export .sticky-right{ position:static; box-shadow:none }
+.wm-wrap.wm-export .sticky-bottom{ display:none }
+.wm-wrap.wm-export .wm-hscroll, .wm-wrap.wm-export .wm-mask-left{ display:none }
 .wm-wrap.compact .wm-rowhead{ padding:8px 8px }
 .wm-wrap.compact .wm-col{ padding:8px 6px }
 .wm-wrap.compact .wm-cell{ min-height:40px }
