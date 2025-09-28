@@ -500,6 +500,7 @@ export default function PlanDetail(){
           <WeekMatrix
             plan={{...plan, name: localName, period: localPeriod}}
             onEdit={(a)=>{ startEditArtifact(a as any); }}
+            ref={matrixRef as any}
           />
         </main>
       </section>

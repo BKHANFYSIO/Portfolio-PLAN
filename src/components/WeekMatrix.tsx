@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from 'react'
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef, type Ref } from 'react'
 import type { PortfolioPlan, Artifact } from '../lib/storage'
 import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import { getCurriculumForYear, getYears } from '../lib/curriculum'
@@ -12,7 +12,7 @@ export type WeekMatrixHandle = {
 
 type Props = { plan: PortfolioPlan; onEdit?: (a: Artifact)=>void }
 
-function WeekMatrix({ plan, onEdit }: Props, ref: React.Ref<WeekMatrixHandle>){
+function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
   const { evl, courses } = getCurriculumForYear(plan.year)
   const years = getYears()
   const course = courses.find(c=>c.id===plan.courseId)
@@ -1405,4 +1405,4 @@ function WeekMatrix({ plan, onEdit }: Props, ref: React.Ref<WeekMatrixHandle>){
   )
 }
 
-export default forwardRef(WeekMatrix)
+export default forwardRef<WeekMatrixHandle, Props>(WeekMatrix)
