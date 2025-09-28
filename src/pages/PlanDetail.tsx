@@ -273,10 +273,11 @@ export default function PlanDetail(){
     let pages: HTMLElement[] = []
     let page = makePage()
     const finalizePage = async (first:boolean) => {
-      const c = await html2canvas(page, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-      const img = c.toDataURL('image/png')
+      // Minder geheugen: lagere render-scale en JPEG‑compressie
+      const c = await html2canvas(page, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:1.25 })
+      const img = c.toDataURL('image/jpeg', 0.8)
       const drawH = c.height * (pageW / c.width)
-      if(first){ doc.addImage(img, 'PNG', 0, 0, pageW, drawH) } else { doc.addPage('a4','landscape'); doc.addImage(img, 'PNG', 0, 0, pageW, drawH) }
+      if(first){ doc.addImage(img, 'JPEG', 0, 0, pageW, drawH) } else { doc.addPage('a4','landscape'); doc.addImage(img, 'JPEG', 0, 0, pageW, drawH) }
       document.body.removeChild(page)
     }
 
@@ -356,12 +357,12 @@ export default function PlanDetail(){
           <div>Kwantiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.kwantiteit||0)/5*100}%"></div></div></div>
         </div>`
       document.body.appendChild(wrap)
-      const c2 = await html2canvas(wrap, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-      const img2 = c2.toDataURL('image/png')
+      const c2 = await html2canvas(wrap, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:1.25 })
+      const img2 = c2.toDataURL('image/jpeg', 0.8)
       const r2 = Math.min(pageW / c2.width, pageH / c2.height)
       const w2 = c2.width * r2, h2 = c2.height * r2
       const x2 = (pageW - w2)/2, y2 = (pageH - h2)/2
-      doc.addImage(img2, 'PNG', x2, y2, w2, h2)
+      doc.addImage(img2, 'JPEG', x2, y2, w2, h2)
       document.body.removeChild(wrap)
     }
     doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
