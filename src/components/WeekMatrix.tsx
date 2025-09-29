@@ -162,32 +162,116 @@ export default function WeekMatrix({ plan, onEdit }: Props){
       }
     }
 
-    // Relevantie: gemiddeld van eigen relevantiescores
-    const rVals = arts.map(a=> (a.vraak?.relevantie ?? 1))
-    const r = clamp(rVals.reduce((a,b)=>a+b,0)/rVals.length)
+    // Relevantie: Top-2 gemiddelde per subrij – ontbrekende telt als 1
+    const top2Avg = (list: Artifact[]) => {
+      const vals = (list||[]).map(a=> (a.vraak?.relevantie ?? 1)).sort((a,b)=> b-a)
+      const r1 = vals[0] ?? 1
+      const r2 = vals[1] ?? 1
+      return (r1 + r2) / 2 // schaal 1..5
+    }
+    let r01 = 0
+    if(subIds && subIds.length>0){
+      const perSub = subIds.map(id => arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id)))
+      const perSubScores = perSub.map(list => top2Avg(list)) // 1..5
+      const avg = perSubScores.reduce((a,b)=>a+b,0) / (perSubScores.length||1) // 1..5
+      r01 = Math.max(0, Math.min(1, (avg - 1) / 4))
+      ;(meta as any).relevance = { method:'top2-avg', note:'gem. van top-2; ontbrekende=1', samples: perSubScores }
+    }else{
+      const s = top2Avg(arts) // 1..5
+      r01 = Math.max(0, Math.min(1, (s - 1) / 4))
+      ;(meta as any).relevance = { method:'top-2-avg', note:'gem. van top-2; ontbrekende=1', samples: [s] }
+    }
+    const r = clamp(1 + 4*Math.max(0, Math.min(1, r01)))
 
-    // Authenticiteit: per subrij hoogste waarde, anders gemiddelde
+    // Authenticiteit: zelfde principe als relevantie – top‑2 gemiddelde per subrij; ontbrekende telt als 1
     let a1 = 1
     if(subIds && subIds.length>0){
-      const perSub = subIds.map(id => {
-        const inSub = arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id))
-        if(inSub.length===0) return 1
-        return Math.max(...inSub.map(a=> (a.vraak?.authenticiteit ?? 1)))
+      const perSub = subIds.map(id => arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id)))
+      const perSubScores = perSub.map(list => {
+        const vals = (list||[]).map(a=> (a.vraak?.authenticiteit ?? 1)).sort((a,b)=> b-a)
+        const s1 = vals[0] ?? 1
+        const s2 = vals[1] ?? 1
+        return (s1 + s2) / 2 // 1..5
       })
-      a1 = clamp(perSub.reduce((a,b)=>a+b,0)/perSub.length)
+      const avg = perSubScores.reduce((a,b)=>a+b,0) / (perSubScores.length||1)
+      a1 = clamp(avg)
+      ;(meta as any).authenticity = { method:'top2-avg', samples: perSubScores }
     }else{
-      const vals = arts.map(a=> (a.vraak?.authenticiteit ?? 1))
-      a1 = clamp(vals.reduce((a,b)=>a+b,0)/vals.length)
+      const vals = (arts||[]).map(a=> (a.vraak?.authenticiteit ?? 1)).sort((a,b)=> b-a)
+      const s1 = vals[0] ?? 1
+      const s2 = vals[1] ?? 1
+      a1 = clamp((s1 + s2)/2)
+      ;(meta as any).authenticity = { method:'top2-avg', samples: [a1] }
     }
 
-    // Actualiteit: recency op basis van createdAt (indicatief)
-    const daysBetween = (ms:number)=> Math.floor((Date.now() - ms)/(24*3600*1000))
-    const recencyScore = (d:number)=> (d<=90?5:d<=180?4:d<=365?3:d<=540?2:1)
-    const a2 = clamp(arts.map(a=> recencyScore(daysBetween(a.createdAt||Date.now()))).reduce((a,b)=>a+b,0)/arts.length)
+    // Actualiteit: volgens gekozen periode; top‑2 gemiddelde per subrij, ontbrekende telt als 1
+    const actualiteitScore = (a: Artifact): number => {
+      const age = (a as any).occurrenceAge as ('lt6m'|'6to12m'|'1to2y'|'2to3y'|'gt3y'|undefined)
+      if(!age) return 5
+      if(age==='lt6m') return 4
+      if(age==='6to12m') return 4
+      if(age==='1to2y') return 3
+      if(age==='2to3y') return 2
+      return 1
+    }
+    let a2 = 1
+    if(subIds && subIds.length>0){
+      const perSub = subIds.map(id => arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id)))
+      const perSubScores = perSub.map(list => {
+        const vals = (list||[]).map(actualiteitScore).sort((a,b)=> b-a)
+        const s1 = vals[0] ?? 1
+        const s2 = vals[1] ?? 1
+        return (s1 + s2) / 2 // 1..5
+      })
+      const avg = perSubScores.reduce((a,b)=>a+b,0) / (perSubScores.length||1)
+      a2 = clamp(avg)
+      ;(meta as any).actuality = { method:'top2-avg', mapping:'week=5,<6m=4,6–12m=4,1–2y=3,2–3y=2,>3y=1', samples: perSubScores }
+    }else{
+      const vals = (arts||[]).map(actualiteitScore).sort((a,b)=> b-a)
+      const s1 = vals[0] ?? 1
+      const s2 = vals[1] ?? 1
+      a2 = clamp((s1 + s2) / 2)
+      ;(meta as any).actuality = { method:'top2-avg', mapping:'week=5,<6m=4,6–12m=4,1–2y=3,2–3y=2,>3y=1', samples: [a2] }
+    }
 
-    // Kwantiteit: aantal bewijzen t.o.v. richtwaarde
-    const target = 5
-    const k = clamp(1 + 4*Math.min(1, arts.length/target))
+    // Kwantiteit: adaptieve verzadiging per subrij, op basis van (V,R,A,A)
+    const toV15 = (v01:number)=> 1 + 4*Math.max(0, Math.min(1, v01))
+    const top2AvgBy = (list: Artifact[], getter: (a:Artifact)=>number) => {
+      const vals = (list||[]).map(getter).sort((a,b)=> b-a)
+      const s1 = vals[0] ?? 1
+      const s2 = vals[1] ?? 1
+      return (s1 + s2) / 2 // 1..5
+    }
+    const thresholdFromS = (S:number)=> {
+      const t = Math.round(5 - 3 * ((S - 1) / 4))
+      return Math.max(2, Math.min(5, t))
+    }
+    let k = 1
+    if(subIds && subIds.length>0){
+      const perSub = subIds.map(id => arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id)))
+      const perSubK = perSub.map(list => {
+        const vS = toV15(scorePerGroup(list)) // 1..5
+        const rS = top2AvgBy(list, a=> (a.vraak?.relevantie ?? 1)) // 1..5
+        const aS = top2AvgBy(list, a=> (a.vraak?.authenticiteit ?? 1)) // 1..5
+        const acS = top2AvgBy(list, actualiteitScore) // 1..5
+        const S = (vS + rS + aS + acS)/4
+        const T = thresholdFromS(S)
+        const n = list.length
+        return 1 + 4*Math.min(1, n / T)
+      })
+      k = clamp(perSubK.reduce((a,b)=>a+b,0) / (perSubK.length||1))
+      ;(meta as any).quantity = { method:'adaptive-threshold', note:'T afhankelijk van V,R,A,A; 2..5', examples: perSub.map(l=> l.length) }
+    }else{
+      const vS = v
+      const rS = r
+      const aS = a1
+      const acS = a2
+      const S = (vS + rS + aS + acS)/4
+      const T = thresholdFromS(S)
+      const n = arts.length
+      k = clamp(1 + 4*Math.min(1, n / T))
+      ;(meta as any).quantity = { method:'adaptive-threshold', note:'T afhankelijk van V,R,A,A; 2..5', n, T }
+    }
     return { v,r,a1,a2,k, meta }
   }
 
@@ -919,7 +1003,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
           {(course?.cases?.length||0) > 0 && (
           <div>
               <div className="wm-evlhead" onClick={()=>setOpenCasus(v=>!v)}>
-              <div className="wm-rowhead evl"><span className={openCasus ? 'caret down':'caret'} /> Casussen / Thema’s</div>
+              <div className="wm-rowhead evl"><span className={openCasus ? 'caret down':'caret'} /> Casussen / Thema's</div>
               <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.length>0)
@@ -1340,9 +1424,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
             <button className="wm-smallbtn" onClick={()=> setVraakDetail(null)}>Sluiten</button>
           </div>
           <div style={{background:'rgba(255,160,0,.12)', border:'1px solid rgba(255,160,0,.4)', color:'#f0c27b', padding:8, borderRadius:8, marginBottom:10, fontSize:12}}>
-            Let op: deze VRAAK‑diagram met berekende waardes per VRAAK‑criterium is een hulpmiddel. Beoordeel altijd holistisch met oog voor context; de berekening is indicatief en doet nooit volledig recht aan de totale situatie.
+            Let op: deze VRAAK‑diagram is een hulpmiddel. De scores worden berekend met eenvoudige (arbitraire) formules en deels op basis van jouw eigen zelfbeoordelingen. Gebruik ze als indicatie; beoordeel altijd holistisch en met oog voor context – de werkelijkheid is rijker dan een berekening.
           </div>
           <div style={{display:'grid', gridTemplateColumns:'minmax(220px,280px) 1fr', gap:16, alignItems:'start'}}>
+            <div style={{alignSelf:'center'}}>
             <div className="vraak-bars" style={{height:240, display:'flex', alignItems:'flex-end', justifyContent:'center', gap:12, padding:'0 2px'}}>
               {(()=>{
                 const bars = vraakDetail.bars as any
@@ -1353,18 +1438,58 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> {
                       const title = (()=>{
                         if(lbl==='V' && meta?.variation){
-                          const m = meta.variation
                           return [
-                            'Variatie (1/3 elk):',
-                            `• Soorten bewijs: ${m.kindsCount} / ${m.kindsMax} (≥3 = max)`,
-                            `• Perspectieven: ${m.persp.presentCount} / ${m.persp.max} (docent, zelfreflectie, hf2-3, en student‑p of hf1)`,
-                            `• Tijdspreiding: ${m.time.filled} / ${m.time.total} segmenten (vroeg/midden/laat)`
+                            'Variatie:',
+                            '• Mix van bewijsvormen, verschillende feedbackbronnen en spreiding over tijd (begin–midden–eind).',
+                            '• Hoe meer mix, hoe hoger de score.'
                           ].join('\n')
                         }
-                        if(lbl==='R') return 'Relevantie: gemiddelde van eigen scores'
-                        if(lbl==='A' && i===2) return 'Authenticiteit: hoogste per subonderdeel of gemiddeld'
-                        if(lbl==='A' && i===3) return 'Actualiteit: recenter bewijs weegt zwaarder'
-                        if(lbl==='K') return 'Kwantiteit: aantal bewijzen t.o.v. richtwaarde'
+                        if(lbl==='R'){
+                          const m = meta?.relevance
+                          if(m?.method==='top2-avg' || m?.method==='top-2-avg'){
+                            return [
+                              'Relevantie:',
+                              '• Per leeruitkomst nemen we je 2 hoogste relevantiesscores; is er maar één, dan telt de tweede als 1.',
+                              '• De score is het gemiddelde van die 2 (1–5).'
+                            ].join('\n')
+                          }
+                          return 'Relevantie: 2 hoogste scores, ontbrekende telt als 1; gemiddelde (1–5)'
+                        }
+                        if(lbl==='A' && i===2){
+                          const m = meta?.authenticity
+                          if(m?.method==='top2-avg'){
+                            return [
+                              'Authenticiteit:',
+                              '• Per leeruitkomst nemen we je 2 hoogste authenticiteitsscores; is er maar één, dan telt de tweede als 1.',
+                              '• De score is het gemiddelde van die 2 (1–5).'
+                            ].join('\n')
+                          }
+                          return 'Authenticiteit: 2 hoogste scores, ontbrekende telt als 1; gemiddelde (1–5)'
+                        }
+                        if(lbl==='A' && i===3){
+                          const m = meta?.actuality
+                          if(m?.method==='top2-avg'){
+                            return [
+                              'Actualiteit:',
+                              '• Bewijs in de lesweek = 5; <6 maanden = 4; 6–12 maanden = 4; 1–2 jaar = 3; 2–3 jaar = 2; >3 jaar = 1.',
+                              '• Per leeruitkomst nemen we de 2 beste en middelen (ontbrekende telt als 1).'
+                            ].join('\n')
+                          }
+                          return 'Actualiteit: week=5,<6m=4,6–12m=4,1–2y=3,2–3y=2,>3y=1; 2 beste gemiddeld'
+                        }
+                        if(lbl==='K'){
+                          const m = meta?.quantity
+                          if(m?.method==='adaptive-threshold'){
+                            return [
+                              'Kwantiteit (verzadiging):',
+                              '• We kijken per leeruitkomst of je “genoeg” bewijs hebt.',
+                              '• Scoor je op V, R, A en A al hoog? Dan zijn 2 sterke bewijzen vaak genoeg.',
+                              '• Zijn die scores lager? Dan heb je er meer nodig (richtwaarde loopt op tot ±5).',
+                              '• Je score loopt op met het aantal: 1 = weinig, 5 = verzadigd (n van T).'
+                            ].join('\n')
+                          }
+                          return 'Kwantiteit: per leeruitkomst “genoeg” bewijs; sterk → vaak 2 genoeg; zwakker → tot ±5'
+                        }
                         return ''
                       })()
                       return (
@@ -1377,15 +1502,17 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 )
               })()}
             </div>
+            <div className="muted" style={{fontSize:12, marginTop:8, textAlign:'center'}}>Tip: beweeg met je muis over de balken voor een korte uitleg per score.</div>
+            </div>
             <div style={{marginTop:0}}>
               <ul className="muted" style={{lineHeight:1.6, marginTop:0}}>
-                <li><strong>V – Variatie</strong>: combinatie van (1) meerdere soorten bewijs, (2) verplichte perspectieven aanwezig (docent, zelfreflectie, student‑hf2‑3 en student‑p of student‑hf1), en (3) spreiding over tijd (vroeg/midden/laat van de geselecteerde periode).</li>
-                <li><strong>R – Relevantie</strong>: gemiddelde van je eigen relevantiescores.</li>
-                <li><strong>A – Authenticiteit</strong>: hoogste authenticiteit per subonderdeel of het gemiddelde per rij.</li>
-                <li><strong>A – Actualiteit</strong>: recenter bewijs weegt zwaarder.</li>
-                <li><strong>K – Kwantiteit</strong>: aantal bewijzen t.o.v. een richtwaarde.</li>
+                <li><strong>V – Variatie</strong>: zorg voor een mix aan bewijsvormen (schriftelijke producten, presentaties/video/live performances, kennisbewijs), feedback vanuit verschillende perspectieven (o.a. docent, zelfreflectie, ouderejaars/peers/experts) én spreiding in tijd (vroeg/midden/laat). Wissel groepsproducten en individuele producten af.</li>
+                <li><strong>R – Relevantie</strong>: laat met je bewijs de belangrijkste elementen van de leeruitkomst(en) en het thema zien. Controleer of je met je verzameling bewijs alle leeruitkomsten aantoont.</li>
+                <li><strong>A – Authenticiteit</strong>: maak voor je begeleiders en beoordelaars duidelijk dat je bewijs echt is en jouw eigen ervaring en deskundigheid weerspiegelt. Sluit plagiaat uit, maak je eigen bijdrage bij groepsproducten zichtbaar en geef aan waar en hoe je AI hebt gebruikt.</li>
+                <li><strong>A – Actualiteit</strong>: dit zit meestal goed omdat je bewijs in de (les)week van uitvoering toevoegt. Gebruik je ouder bewijs (bijv. bij herkansing of na een tussenperiode), geef dit dan aan en check of het nog bij het thema past.</li>
+                <li><strong>K – Kwantiteit</strong>: het gaat om verzadiging: is er per leeruitkomst/subcategorie genoeg bewijs om een goed beeld te geven van waar jij staat? Is dit verzadigd, dan hoef je niet meer bewijs toe te voegen.</li>
               </ul>
-              <div className="muted" style={{fontSize:12, marginTop:8}}>Tip: beweeg met je muis over de balken voor een korte uitleg per score.</div>
+              
             </div>
           </div>
         </div>

@@ -143,6 +143,40 @@ export default function PlanDetail(){
     setEditOccurrenceAge((a.occurrenceAge as EvidenceAgeBracket)||'')
   }
 
+  // Helper: bepaal of bewerkformulier gewijzigd is t.o.v. huidig artifact
+  const isEditDirty = () => {
+    if(!editArtifactId) return false
+    const cur = (plan.artifacts||[]).find((a:any)=>a.id===editArtifactId)
+    if(!cur) return false
+    const eqArr = (a:any[]|undefined, b:any[]|undefined)=> JSON.stringify([...(a||[])].sort())===JSON.stringify([...(b||[])].sort())
+    const eqObj = (a:any, b:any)=> JSON.stringify(a||{})===JSON.stringify(b||{})
+    if((cur.name||'') !== (editArtifactName||'')) return true
+    if(Number(cur.week||0) !== Number(editArtifactWeek||0)) return true
+    if(String(cur.kind||'') !== String(editArtifactKind||'')) return true
+    if(!eqArr(cur.evlOutcomeIds, editArtifactEvl)) return true
+    if(!eqArr(cur.caseIds, editArtifactCases)) return true
+    if(!eqArr(cur.knowledgeIds, editArtifactKnowl)) return true
+    if(!eqArr(cur.perspectives||[], editArtifactPersp||[])) return true
+    if(!eqObj(cur.vraak||{}, editArtifactVraak||{})) return true
+    if(String((cur as any).occurrenceAge||'') !== String(editOccurrenceAge||'')) return true
+    return false
+  }
+
+  // Sneltoetsen in bewerkmodal: Ctrl+S opslaan, Esc annuleren (met bevestiging bij wijzigingen)
+  useEffect(()=>{
+    if(!editArtifactId) return
+    const onKey = (e: KeyboardEvent)=>{
+      if(e.key==='s' && (e.ctrlKey||e.metaKey)){
+        e.preventDefault(); saveArtifactEdits()
+      }
+      if(e.key==='Escape'){
+        e.preventDefault(); if(!isEditDirty()|| confirm('Wijzigingen niet opgeslagen. Annuleren?')) setEditArtifactId(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return ()=> window.removeEventListener('keydown', onKey)
+  }, [editArtifactId, editArtifactName, editArtifactWeek, editArtifactKind, editArtifactEvl, editArtifactCases, editArtifactKnowl, editArtifactVraak, editArtifactPersp, editOccurrenceAge])
+
   function saveArtifactEdits(){
     if(!editArtifactId) return
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
@@ -658,11 +692,14 @@ export default function PlanDetail(){
       )}
 
       {editArtifactId && (
-        <div className="modal-backdrop" onClick={()=>setEditArtifactId(null)}>
+        <div className="modal-backdrop" onClick={()=>{ if(!isEditDirty() || confirm('Wijzigingen niet opgeslagen. Annuleren?')) setEditArtifactId(null) }}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
             <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <h3 style={{margin:0}}>Bewijsstuk bewerken</h3>
-              <button className="wm-smallbtn" aria-label="Sluiten" onClick={()=>setEditArtifactId(null)}>Sluiten</button>
+              <div style={{display:'flex', gap:8}}>
+                <button className="wm-smallbtn" aria-label="Annuleren" title="Annuleren" onClick={()=>{ if(!isEditDirty() || confirm('Wijzigingen niet opgeslagen. Annuleren?')) setEditArtifactId(null) }}>Annuleren</button>
+                <button className="wm-smallbtn wm-primary" aria-label="Opslaan" title="Opslaan (Ctrl+S)" onClick={saveArtifactEdits}>Opslaan</button>
+              </div>
             </div>
             <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
               <label><span>Naam</span><input value={editArtifactName} onChange={e=>setEditArtifactName(e.target.value)} /></label>
@@ -813,10 +850,7 @@ export default function PlanDetail(){
                 </div>
               </div>
             </fieldset>
-            <div className="dialog-actions">
-              <button className="file-label" onClick={()=>setEditArtifactId(null)}>Annuleren</button>
-              <button className="btn" onClick={saveArtifactEdits}>Opslaan</button>
-            </div>
+            {/* footer verwijderd; acties staan in de header */}
           </div>
         </div>
       )}
