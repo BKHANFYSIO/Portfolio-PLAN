@@ -6,14 +6,14 @@ import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { PortfolioPlan } from '../lib/storage'
 import './planDetail.css'
 import AddArtifactDialog from '../components/AddArtifactDialog'
-import WeekMatrix, { WeekMatrixHandle } from '../components/WeekMatrix'
+import WeekMatrix from '../components/WeekMatrix'
 import { getYears } from '../lib/curriculum'
 import { KindIcon, PerspectiveIcon } from '../components/icons'
 import type { PerspectiveKey } from '../lib/storage'
+import type { EvidenceAgeBracket } from '../lib/storage'
 import { getCurriculumForYear } from '../lib/curriculum'
 
 export default function PlanDetail(){
-  const matrixRef = useRef<WeekMatrixHandle|null>(null)
   const { id } = useParams()
   const plans = readJson(LS_KEYS.plans, [] as any[])
   const plan = plans.find(p=>p.id===id)
@@ -35,6 +35,7 @@ export default function PlanDetail(){
   const [editArtifactCases, setEditArtifactCases] = useState<string[]>([])
   const [editArtifactKnowl, setEditArtifactKnowl] = useState<string[]>([])
   const [editArtifactVraak, setEditArtifactVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
+  const [editOccurrenceAge, setEditOccurrenceAge] = useState<EvidenceAgeBracket|''>('')
   const [editArtifactPersp, setEditArtifactPersp] = useState<PerspectiveKey[]>([])
   const [showEdit, setShowEdit] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -50,6 +51,16 @@ export default function PlanDetail(){
     periodEndWeek: String(plan?.period?.type==='maatwerk' ? (plan?.period?.value as number[])[1] : ''),
   })
   const yearWeeks = getYears().find(y=>y.year===plan.year)?.weeks || []
+
+  // Hulpfunctie: label “Lesweek x.y · yyyy-mm-dd” voor een weeknummer
+  const formatLesweek = (weekNum: number) => {
+    const info = yearWeeks.find(w=> w.week===weekNum)
+    if(!info) return `Week ${weekNum}`
+    const base = info.code || info.label || `Week ${weekNum}`
+    const prefix = info.code ? 'Lesweek ' : ''
+    const date = info.startISO ? ` · ${info.startISO}` : ''
+    return `${prefix}${base}${date}`
+  }
 
   const centerRef = useRef<HTMLElement|null>(null)
 
@@ -72,105 +83,6 @@ export default function PlanDetail(){
     if(!el) return
     if(!document.fullscreenElement){ el.requestFullscreen?.(); }
     else{ document.exitFullscreen?.() }
-  }
-
-  async function exportPdfFullMatrix(){
-    try{
-      // 1) Expand all
-      await matrixRef.current?.expandAllForExport()
-      const table = matrixRef.current?.getTableElement()
-      if(!table) return
-
-      // 2) Clone offscreen
-      const wrapper = document.createElement('div')
-      wrapper.style.position = 'fixed'
-      wrapper.style.left = '-10000px'
-      wrapper.style.top = '0'
-      wrapper.style.zIndex = '0'
-      const cloneRoot = table.cloneNode(true) as HTMLElement
-      cloneRoot.classList.add('wm-export')
-      wrapper.appendChild(cloneRoot)
-      document.body.appendChild(wrapper)
-
-      // Force layout
-      await new Promise(r=> requestAnimationFrame(r))
-
-      const pageWidth = 1600 // px basis voor goede kwaliteit; wordt geschaald in PDF
-      const originalWidth = cloneRoot.scrollWidth || cloneRoot.clientWidth
-      const scale = originalWidth>0 ? pageWidth / originalWidth : 1
-
-      const viewport = document.createElement('div')
-      viewport.style.position = 'fixed'
-      viewport.style.left = '-10000px'
-      viewport.style.top = '0'
-      viewport.style.width = `${pageWidth}px`
-      const pageHeight = 1120 // px bij landscape verhouding
-      viewport.style.height = `${pageHeight}px`
-      viewport.style.overflow = 'hidden'
-
-      const scWrap = document.createElement('div')
-      scWrap.style.transformOrigin = 'top left'
-      scWrap.style.transform = `scale(${scale})`
-      scWrap.appendChild(cloneRoot)
-      viewport.appendChild(scWrap)
-      document.body.appendChild(viewport)
-
-      // Bepaal blokken (alle EVL hoofden + casus/kennis secties)
-      const blocks: Array<{top:number;height:number}> = []
-      const heads = Array.from(viewport.querySelectorAll('.wm-evlhead')) as HTMLElement[]
-      const pushBlock = (startEl: HTMLElement, endEl?: HTMLElement)=>{
-        const top = startEl.offsetTop
-        const height = (endEl? endEl.offsetTop : (cloneRoot.offsetTop + cloneRoot.scrollHeight)) - top
-        blocks.push({ top, height })
-      }
-      for(let i=0;i<heads.length;i++){
-        pushBlock(heads[i], heads[i+1])
-      }
-
-      // Fallback: als geen blokken gevonden (zou niet moeten), gebruik hele tabel
-      if(blocks.length===0){ blocks.push({ top:0, height: cloneRoot.scrollHeight }) }
-
-      const pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-      const pdfW = pdf.internal.pageSize.getWidth()
-      const pdfH = pdf.internal.pageSize.getHeight()
-
-      let yOffset = 0
-      let pageIndex = 0
-      const margin = 16
-
-      const toCanvas = async (y:number)=>{
-        scWrap.style.transform = `scale(${scale}) translateY(-${y}px)`
-        await new Promise(r=> requestAnimationFrame(r))
-        return await html2canvas(viewport, { scale: 2, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff' })
-      }
-
-      for(const block of blocks){
-        if(yOffset + block.height > (pageIndex+1)*pageHeight - margin){
-          // start nieuwe pagina
-          const snapY = pageIndex*pageHeight
-          const canvas = await toCanvas(snapY)
-          const img = canvas.toDataURL('image/png')
-          pdf.addImage(img, 'PNG', 0, 0, pdfW, pdfH)
-          pdf.addPage('a4','landscape')
-          pageIndex++
-        }
-        yOffset = block.top + block.height
-      }
-      // laatste pagina
-      const lastY = pageIndex*pageHeight
-      const canvas = await toCanvas(lastY)
-      const img = canvas.toDataURL('image/png')
-      pdf.addImage(img, 'PNG', 0, 0, pdfW, pdfH)
-
-      // cleanup
-      document.body.removeChild(viewport)
-      document.body.removeChild(wrapper)
-
-      pdf.save(`${localName.replace(/\s+/g,'_')}_matrix.pdf`)
-    }catch(err){
-      console.error('export failed', err)
-      alert('Exporteren is niet gelukt. Probeer opnieuw.')
-    }
   }
 
   function getVisibleWeekNumbers(p: PortfolioPlan['period']){
@@ -228,6 +140,7 @@ export default function PlanDetail(){
     setEditArtifactKnowl([...(a.knowledgeIds||[])])
     setEditArtifactVraak({ ...(a.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
     setEditArtifactPersp([...(a.perspectives||[])])
+    setEditOccurrenceAge((a.occurrenceAge as EvidenceAgeBracket)||'')
   }
 
   function saveArtifactEdits(){
@@ -235,11 +148,11 @@ export default function PlanDetail(){
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
     const idx = plans.findIndex(p=>p.id===plan.id)
     if(idx>=0){
-      plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map((a:any)=> a.id===editArtifactId ? ({ ...a, name: editArtifactName.trim()||a.name, week: Number(editArtifactWeek), kind: editArtifactKind||undefined, perspectives: editArtifactPersp, evlOutcomeIds: editArtifactEvl, caseIds: editArtifactCases, knowledgeIds: editArtifactKnowl, vraak: editArtifactVraak, updatedAt: Date.now() }) : a), updatedAt: Date.now() }
+      plans[idx] = { ...plans[idx], artifacts: plans[idx].artifacts.map((a:any)=> a.id===editArtifactId ? ({ ...a, name: editArtifactName.trim()||a.name, week: Number(editArtifactWeek), kind: editArtifactKind||undefined, perspectives: editArtifactPersp, evlOutcomeIds: editArtifactEvl, caseIds: editArtifactCases, knowledgeIds: editArtifactKnowl, vraak: editArtifactVraak, occurrenceAge: editOccurrenceAge||undefined, updatedAt: Date.now() }) : a), updatedAt: Date.now() }
       writeJson(LS_KEYS.plans, plans)
       // update lokaal object zodat lijst ververst
       const aIdx = (plan.artifacts||[]).findIndex((a:any)=>a.id===editArtifactId)
-      if(aIdx>=0){ (plan.artifacts as any[])[aIdx] = { ...(plan.artifacts as any[])[aIdx], name: editArtifactName.trim()||editArtifactName, week: Number(editArtifactWeek), kind: editArtifactKind||undefined, perspectives: editArtifactPersp } }
+      if(aIdx>=0){ (plan.artifacts as any[])[aIdx] = { ...(plan.artifacts as any[])[aIdx], name: editArtifactName.trim()||editArtifactName, week: Number(editArtifactWeek), kind: editArtifactKind||undefined, perspectives: editArtifactPersp, occurrenceAge: editOccurrenceAge||undefined } }
     }
     setEditArtifactId(null)
   }
@@ -352,7 +265,7 @@ export default function PlanDetail(){
       wrap.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
       wrap.innerHTML = `
         <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">${formatLesweek(a.week)} · Soort: ${a.kind||'—'}</div>
         <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
           <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
           <div>Casus / Thema</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
@@ -416,7 +329,7 @@ export default function PlanDetail(){
       wrapEl.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
       wrapEl.innerHTML = `
         <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">Week ${a.week} · Soort: ${a.kind||'—'}</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">${formatLesweek(a.week)} · Soort: ${a.kind||'—'}</div>
         <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
           <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
           <div>Casus</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
@@ -466,7 +379,7 @@ export default function PlanDetail(){
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             Alle bewijsstukken
           </button>
-          <button className="btn" onClick={exportPdfFullMatrix} title="PDF export (matrix 1:1)">
+          <button className="btn" onClick={()=> setShowPdfGuide(true)} title="PDF export">
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 2h10l4 4v16H4z"/>
               <path d="M14 2v4h4"/>
@@ -498,7 +411,6 @@ export default function PlanDetail(){
           <WeekMatrix
             plan={{...plan, name: localName, period: localPeriod}}
             onEdit={(a)=>{ startEditArtifact(a as any); }}
-            ref={matrixRef as any}
           />
         </main>
       </section>
@@ -853,12 +765,52 @@ export default function PlanDetail(){
             </fieldset>
             <fieldset>
               <legend>VRAAK</legend>
-              <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
-                {(['variatie','relevantie','authenticiteit','actualiteit','kwantiteit'] as const).map(k => (
-                  <label key={k}><span style={{textTransform:'capitalize'}}>{k}</span>
-                    <input type="range" min={1} max={5} value={(editArtifactVraak as any)[k]} onChange={e=> setEditArtifactVraak({ ...editArtifactVraak, [k]: Number(e.target.value) } as any)} />
+              <div style={{display:'grid', gap:12}}>
+                <div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Variatie</div>
+                  <div className="muted" style={{fontSize:12}}>
+                    Variatie beoordeel je over je héle portfolio, niet per individueel datapunt. Kijk in de matrix:
+                    <ul style={{margin:'6px 0 0 16px'}}>
+                      <li>Per EVL/categorie: spreiding over de tijd.</li>
+                      <li>In de VRAAK‑kolom per leeruitkomst/subcategorie: variatie in soorten bewijs en perspectieven.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+                  <div>
+                    <div style={{fontWeight:600}}>Relevantie</div>
+                    <div className="muted" style={{fontSize:12}}>In hoeverre draagt dit bewijsstuk bij aan de LUK/EVL?</div>
+                  </div>
+                  <input type="range" min={1} max={5} value={editArtifactVraak.relevantie} onChange={e=> setEditArtifactVraak({ ...editArtifactVraak, relevantie: Number(e.target.value) } as any)} />
+                </div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+                  <div>
+                    <div style={{fontWeight:600}}>Authenticiteit</div>
+                    <div className="muted" style={{fontSize:12}}>Hoe echt/praktijk‑getrouw is het bewijs en de context?</div>
+                  </div>
+                  <input type="range" min={1} max={5} value={editArtifactVraak.authenticiteit} onChange={e=> setEditArtifactVraak({ ...editArtifactVraak, authenticiteit: Number(e.target.value) } as any)} />
+                </div>
+                <div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
+                  <div className="muted" style={{fontSize:12, marginBottom:6}}>Standaard gaan we uit van de lesweek van dit bewijs. Is de prestatie ouder? Kies hieronder de periode.</div>
+                  <label style={{display:'block'}}>
+                    <span className="muted" style={{display:'block', fontSize:12, marginBottom:4}}>Periode van prestatie (indien ouder)</span>
+                    <select value={editOccurrenceAge} onChange={e=> setEditOccurrenceAge(e.target.value as EvidenceAgeBracket|'' )}>
+                      <option value="">Prestatie in geselecteerde lesweek (standaard)</option>
+                      <option value="lt6m">Afgelopen half jaar</option>
+                      <option value="6to12m">Tussen half jaar en een jaar</option>
+                      <option value="1to2y">Tussen 1 en 2 jaar terug</option>
+                      <option value="2to3y">Tussen 2 en 3 jaar terug</option>
+                      <option value="gt3y">Meer dan 3 jaar terug</option>
+                    </select>
                   </label>
-                ))}
+                </div>
+                <div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Kwantiteit</div>
+                  <div className="muted" style={{fontSize:12}}>
+                    Gaat over verzadiging van bewijs op leeruitkomsten/subcategorieën: is er in totaal voldoende bewijs geleverd om de leeruitkomsten aan te tonen? Dit beoordeel je in de matrix, niet per individueel datapunt.
+                  </div>
+                </div>
               </div>
             </fieldset>
             <div className="dialog-actions">

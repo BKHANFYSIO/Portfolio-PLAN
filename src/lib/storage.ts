@@ -15,6 +15,9 @@ export type VraakScore = {
   kwantiteit: number;
 }
 
+// Herkomstperiode wanneer de prestatie niet in de gekoppelde lesweek plaatsvond
+export type EvidenceAgeBracket = 'lt6m' | '6to12m' | '1to2y' | '2to3y' | 'gt3y'
+
 export type Artifact = {
   id: string;
   name: string;
@@ -27,6 +30,8 @@ export type Artifact = {
   createdAt: number;
   updatedAt: number;
   kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';
+  // Optioneel: wanneer bewijs uit eerdere periode komt dan de lesweek
+  occurrenceAge?: EvidenceAgeBracket;
 }
 
 // Perspectieven (slugs). UI toont bijbehorende labels.

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { generateId, LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { Artifact, PortfolioPlan } from '../lib/storage'
+import type { EvidenceAgeBracket } from '../lib/storage'
 import type { PerspectiveKey } from '../lib/storage'
 import { getCurriculumForYear, getYears } from '../lib/curriculum'
 
@@ -25,6 +26,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   const [knowledgeIds, setKnowledgeIds] = useState<string[]>([])
   const [vraak, setVraak] = useState({ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 })
   const [kind, setKind] = useState<string>('')
+  const [occAge, setOccAge] = useState<EvidenceAgeBracket|''>('')
   const [persp, setPersp] = useState<PerspectiveKey[]>([])
   function applyTemplateByName(name: string){
     const t = templates.find(x=> x.name===name)
@@ -95,6 +97,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
       id: generateId('art'), name: name.trim(), week: Number(week), evlOutcomeIds, caseIds, knowledgeIds, vraak,
       kind: kind as any,
       perspectives: persp,
+      occurrenceAge: occAge || undefined,
       createdAt: Date.now(), updatedAt: Date.now()
     }
     const plans = readJson<PortfolioPlan[]>(LS_KEYS.plans, [])
@@ -258,12 +261,52 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
         )}
 
         {mode==='wizard' && step===4 && (
-          <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))'}}>
-            {(['variatie','relevantie','authenticiteit','actualiteit','kwantiteit'] as const).map(k => (
-              <label key={k}><span>{k}</span>
-                <input type="range" min={1} max={5} value={vraak[k]} onChange={e=>setVraak({ ...vraak, [k]: Number(e.target.value) })} />
+          <div style={{display:'grid', gap:12}}>
+            <div>
+              <div style={{fontWeight:600, marginBottom:4}}>Variatie</div>
+              <div className="muted" style={{fontSize:12}}>
+                Variatie beoordeel je over je héle portfolio, niet per individueel datapunt. Kijk in de matrix:
+                <ul style={{margin:'6px 0 0 16px'}}>
+                  <li>Per EVL/categorie: spreiding over de tijd.</li>
+                  <li>In de VRAAK‑kolom per leeruitkomst/subcategorie: variatie in soorten bewijs en perspectieven.</li>
+                </ul>
+              </div>
+            </div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+              <div>
+                <div style={{fontWeight:600}}>Relevantie</div>
+                <div className="muted" style={{fontSize:12}}>In hoeverre draagt dit bewijsstuk bij aan de LUK/EVL?</div>
+              </div>
+              <input type="range" min={1} max={5} value={vraak.relevantie} onChange={e=>setVraak({ ...vraak, relevantie: Number(e.target.value) })} />
+            </div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+              <div>
+                <div style={{fontWeight:600}}>Authenticiteit</div>
+                <div className="muted" style={{fontSize:12}}>Hoe echt/praktijk‑getrouw is het bewijs en de context?</div>
+              </div>
+              <input type="range" min={1} max={5} value={vraak.authenticiteit} onChange={e=>setVraak({ ...vraak, authenticiteit: Number(e.target.value) })} />
+            </div>
+            <div>
+              <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
+              <div className="muted" style={{fontSize:12, marginBottom:6}}>Standaard gaan we uit van de lesweek van dit bewijs. Is de prestatie ouder? Kies hieronder de periode.</div>
+              <label style={{display:'block'}}>
+                <span className="muted" style={{display:'block', fontSize:12, marginBottom:4}}>Periode van prestatie (indien ouder)</span>
+                <select value={occAge} onChange={e=> setOccAge(e.target.value as EvidenceAgeBracket|'' )}>
+                  <option value="">Prestatie in geselecteerde lesweek (standaard)</option>
+                  <option value="lt6m">Afgelopen half jaar</option>
+                  <option value="6to12m">Tussen half jaar en een jaar</option>
+                  <option value="1to2y">Tussen 1 en 2 jaar terug</option>
+                  <option value="2to3y">Tussen 2 en 3 jaar terug</option>
+                  <option value="gt3y">Meer dan 3 jaar terug</option>
+                </select>
               </label>
-            ))}
+            </div>
+            <div>
+              <div style={{fontWeight:600, marginBottom:4}}>Kwantiteit</div>
+              <div className="muted" style={{fontSize:12}}>
+                Gaat over verzadiging van bewijs op leeruitkomsten/subcategorieën: is er in totaal voldoende bewijs geleverd om de leeruitkomsten aan te tonen? Dit beoordeel je in de matrix, niet per individueel datapunt.
+              </div>
+            </div>
           </div>
         )}
 
@@ -433,12 +476,52 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
             </fieldset>
             <fieldset>
               <legend>VRAAK</legend>
-              <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))'}}>
-                {(['variatie','relevantie','authenticiteit','actualiteit','kwantiteit'] as const).map(k => (
-                  <label key={k}><span>{k}</span>
-                    <input type="range" min={1} max={5} value={vraak[k]} onChange={e=>setVraak({ ...vraak, [k]: Number(e.target.value) })} />
+              <div style={{display:'grid', gap:12}}>
+                <div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Variatie</div>
+                  <div className="muted" style={{fontSize:12}}>
+                    Variatie beoordeel je over je héle portfolio, niet per individueel datapunt. Kijk in de matrix:
+                    <ul style={{margin:'6px 0 0 16px'}}>
+                      <li>Per EVL/categorie: spreiding over de tijd.</li>
+                      <li>In de VRAAK‑kolom per leeruitkomst/subcategorie: variatie in soorten bewijs en perspectieven.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+                  <div>
+                    <div style={{fontWeight:600}}>Relevantie</div>
+                    <div className="muted" style={{fontSize:12}}>In hoeverre draagt dit bewijsstuk bij aan de LUK/EVL?</div>
+                  </div>
+                  <input type="range" min={1} max={5} value={vraak.relevantie} onChange={e=>setVraak({ ...vraak, relevantie: Number(e.target.value) })} />
+                </div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+                  <div>
+                    <div style={{fontWeight:600}}>Authenticiteit</div>
+                    <div className="muted" style={{fontSize:12}}>Hoe echt/praktijk‑getrouw is het bewijs en de context?</div>
+                  </div>
+                  <input type="range" min={1} max={5} value={vraak.authenticiteit} onChange={e=>setVraak({ ...vraak, authenticiteit: Number(e.target.value) })} />
+                </div>
+                <div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
+                  <div className="muted" style={{fontSize:12, marginBottom:6}}>Standaard gaan we uit van de lesweek van dit bewijs. Is de prestatie ouder? Kies hieronder de periode.</div>
+                  <label style={{display:'block'}}>
+                    <span className="muted" style={{display:'block', fontSize:12, marginBottom:4}}>Periode van prestatie (indien ouder)</span>
+                    <select value={occAge} onChange={e=> setOccAge(e.target.value as EvidenceAgeBracket|'' )}>
+                      <option value="">Prestatie in geselecteerde lesweek (standaard)</option>
+                      <option value="lt6m">Afgelopen half jaar</option>
+                      <option value="6to12m">Tussen half jaar en een jaar</option>
+                      <option value="1to2y">Tussen 1 en 2 jaar terug</option>
+                      <option value="2to3y">Tussen 2 en 3 jaar terug</option>
+                      <option value="gt3y">Meer dan 3 jaar terug</option>
+                    </select>
                   </label>
-                ))}
+                </div>
+                <div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Kwantiteit</div>
+                  <div className="muted" style={{fontSize:12}}>
+                    Gaat over verzadiging van bewijs op leeruitkomsten/subcategorieën: is er in totaal voldoende bewijs geleverd om de leeruitkomsten aan te tonen? Dit beoordeel je in de matrix, niet per individueel datapunt.
+                  </div>
+                </div>
               </div>
             </fieldset>
             <div className="dialog-actions">

@@ -1,18 +1,13 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef, type Ref } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PortfolioPlan, Artifact } from '../lib/storage'
 import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import { getCurriculumForYear, getYears } from '../lib/curriculum'
 import './weekMatrix.css'
 import { KindIcon, PerspectiveIcon } from './icons'
 
-export type WeekMatrixHandle = {
-  expandAllForExport: () => Promise<void>
-  getTableElement: () => HTMLElement | null
-}
-
 type Props = { plan: PortfolioPlan; onEdit?: (a: Artifact)=>void }
 
-function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
+export default function WeekMatrix({ plan, onEdit }: Props){
   const { evl, courses } = getCurriculumForYear(plan.year)
   const years = getYears()
   const course = courses.find(c=>c.id===plan.courseId)
@@ -56,6 +51,20 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
     return all.map(w=>w.week)
   }, [plan.year, years, plan.period])
 
+  // Hulpfuncties voor lesweek-labels
+  const getWeekInfo = (weekNum: number) => {
+    const y = years.find(y=>y.year===plan.year)
+    return y?.weeks.find(ww=> ww.week===weekNum)
+  }
+  const formatLesweek = (weekNum: number) => {
+    const info = getWeekInfo(weekNum)
+    if(!info) return `Week ${weekNum}`
+    const base = info.code || info.label || `Week ${weekNum}`
+    const prefix = info.code ? 'Lesweek ' : ''
+    const date = info.startISO ? ` · ${info.startISO}` : ''
+    return `${prefix}${base}${date}`
+  }
+
   // const rows = useMemo(()=> evlForCourse.flatMap(b => b.outcomes.map(o => ({ evlId: b.id, lukId: o.id, name: o.name }))), [evlForCourse])
   const [openCasus, setOpenCasus] = useState<boolean>(true)
   const [openKennis, setOpenKennis] = useState<boolean>(false)
@@ -72,21 +81,92 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
 // (verwijderd: gemiddelde helper onnodig)
 
   // Bereken VRAAK-balken per verzameling artifacts en (optioneel) per-subrij ids
-  function computeVraakBars(arts: Artifact[], subIds?: string[]): { v:number; r:number; a1:number; a2:number; k:number }{
+  function computeVraakBars(arts: Artifact[], subIds?: string[]): { v:number; r:number; a1:number; a2:number; k:number; meta?: any }{
     const clamp = (x:number)=> Math.max(1, Math.min(5, x))
     if(!arts || arts.length===0){
       return { v:1, r:1, a1:1, a2:1, k:1 }
     }
+    // Helpers
     const unique = <T,>(arr:T[]) => Array.from(new Set(arr))
-    const kinds = unique(arts.map(a=> a.kind||'overig')).length
-    const persp = unique(arts.flatMap(a=> Array.isArray(a.perspectives)?a.perspectives:[])).length
-    const sKinds = Math.min(1, kinds/4)
-    const sPersp = Math.min(1, persp/5)
-    const v = clamp(1 + 4*(0.6*sKinds + 0.4*sPersp))
+    const perspectiveCoverage = (perspList: string[]): number => {
+      const s = new Set(perspList.map(p=> String(p)))
+      const must = ['docent','zelfreflectie','student-hf2-3']
+      const baseCount = must.filter(p=> s.has(p)).length
+      const hasStudent = s.has('student-p') || s.has('student-hf1')
+      const total = baseCount + (hasStudent?1:0)
+      return Math.min(1, total/4)
+    }
+    const timeSpreadForWeeks = (weeksForItems: number[]): number => {
+      if(weeks.length===0) return 0
+      const idxByWeek = new Map<number, number>()
+      weeks.forEach((w, i)=> idxByWeek.set(w, i))
+      const validIdx = weeksForItems.map(w=> idxByWeek.get(w)).filter((i): i is number => typeof i==='number')
+      if(validIdx.length===0) return 0
+      const n = weeks.length
+      const seg = Math.max(1, Math.floor(n/3))
+      const segIdx = (i:number)=> Math.min(2, Math.floor(i/seg))
+      const buckets = new Set(validIdx.map(i=> segIdx(i)))
+      return Math.min(1, buckets.size/3)
+    }
 
+    // Variatie-score: combineert soorten bewijs, perspectief-dekking en tijdspreiding (elk 1/3)
+    const scorePerGroup = (groupArts: Artifact[]) => {
+      const kinds = unique(groupArts.map(a=> a.kind||'overig')).length
+      const sKinds = Math.min(1, kinds/3)
+      const allPersp = unique(groupArts.flatMap(a=> Array.isArray(a.perspectives)?a.perspectives:[])) as string[]
+      const sPersp = perspectiveCoverage(allPersp)
+      const weeksHere = unique(groupArts.map(a=> a.week)) as number[]
+      const sTime = timeSpreadForWeeks(weeksHere)
+      const v01 = (sKinds + sPersp + sTime) / 3
+      return v01
+    }
+
+    let v01: number
+    if(subIds && subIds.length>0){
+      const perSub = subIds.map(id => {
+        const inSub = arts.filter(a=> (a.evlOutcomeIds||[]).includes(id) || (a.caseIds||[]).includes(id) || (a.knowledgeIds||[]).includes(id))
+        if(inSub.length===0) return 0
+        return scorePerGroup(inSub)
+      })
+      v01 = perSub.reduce((a,b)=>a+b,0)/perSub.length
+    }else{
+      v01 = scorePerGroup(arts)
+    }
+    const v = clamp(1 + 4*Math.max(0, Math.min(1, v01)))
+
+    // Maak meta voor tooltips/uitleg (gebaseerd op alle arts samen)
+    const allKinds = unique(arts.map(a=> a.kind||'overig')).length
+    const allPersp = unique(arts.flatMap(a=> Array.isArray(a.perspectives)?a.perspectives:[])) as string[]
+    const perspSet = new Set(allPersp.map(p=> String(p)))
+    const perspPresent = {
+      docent: perspSet.has('docent'),
+      zelfreflectie: perspSet.has('zelfreflectie'),
+      hf23: perspSet.has('student-hf2-3'),
+      spOrHf1: (perspSet.has('student-p') || perspSet.has('student-hf1'))
+    }
+    const perspCount = (perspPresent.docent?1:0) + (perspPresent.zelfreflectie?1:0) + (perspPresent.hf23?1:0) + (perspPresent.spOrHf1?1:0)
+    const allWeeksHere = unique(arts.map(a=> a.week)) as number[]
+    const n = weeks.length
+    const seg = Math.max(1, Math.floor(n/3))
+    const idxByWeek = new Map<number, number>()
+    weeks.forEach((w, i)=> idxByWeek.set(w, i))
+    const validIdx = allWeeksHere.map(w=> idxByWeek.get(w)).filter((i): i is number => typeof i==='number')
+    const segIdx = (i:number)=> Math.min(2, Math.floor(i/seg))
+    const filled = new Set(validIdx.map(i=> segIdx(i))).size
+    const meta = {
+      variation: {
+        kindsCount: allKinds, kindsMax: 3,
+        persp: { ...perspPresent, presentCount: perspCount, max: 4 },
+        time: { filled, total: 3 },
+        weights: { kinds: 1/3, persp: 1/3, time: 1/3 }
+      }
+    }
+
+    // Relevantie: gemiddeld van eigen relevantiescores
     const rVals = arts.map(a=> (a.vraak?.relevantie ?? 1))
     const r = clamp(rVals.reduce((a,b)=>a+b,0)/rVals.length)
 
+    // Authenticiteit: per subrij hoogste waarde, anders gemiddelde
     let a1 = 1
     if(subIds && subIds.length>0){
       const perSub = subIds.map(id => {
@@ -100,13 +180,15 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
       a1 = clamp(vals.reduce((a,b)=>a+b,0)/vals.length)
     }
 
+    // Actualiteit: recency op basis van createdAt (indicatief)
     const daysBetween = (ms:number)=> Math.floor((Date.now() - ms)/(24*3600*1000))
     const recencyScore = (d:number)=> (d<=90?5:d<=180?4:d<=365?3:d<=540?2:1)
     const a2 = clamp(arts.map(a=> recencyScore(daysBetween(a.createdAt||Date.now()))).reduce((a,b)=>a+b,0)/arts.length)
 
+    // Kwantiteit: aantal bewijzen t.o.v. richtwaarde
     const target = 5
     const k = clamp(1 + 4*Math.min(1, arts.length/target))
-    return { v,r,a1,a2,k }
+    return { v,r,a1,a2,k, meta }
   }
 
   // Tellers-data en rendering voor subrijen
@@ -418,18 +500,6 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
     return () => { w.removeEventListener('scroll', onWrap); h.removeEventListener('scroll', onH) }
   }, [spacerW])
 
-  useImperativeHandle(ref, () => ({
-    expandAllForExport: async () => {
-      try{
-        setOpen(Object.fromEntries(evlForCourse.map(b=>[b.id, true])))
-        setOpenCasus(true)
-        setOpenKennis(true)
-        await new Promise(r=> requestAnimationFrame(()=> requestAnimationFrame(r)))
-      }catch{}
-    },
-    getTableElement: () => tableRef.current as HTMLElement | null
-  }), [evlForCourse])
-
   return (
     <>
     <div className={`wm-wrap${dragging ? ' dragging' : ''}${compact ? ' compact' : ''}${ultra ? ' ultra' : ''}`} ref={wrapRef}
@@ -633,7 +703,7 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
                 return <div key={`evlh-${block.id}-${w}`} className="wm-cell"
                   onDragOver={(e)=>{ e.preventDefault() }}
                   onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}
-                >{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — week ${w}`) }}>{list.length}</button>}</div>
+                >{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — ${formatLesweek(w)}`) }}>{list.length}</button>}</div>
                   })}
                 </div>
                 <div className="wm-vraak sticky-right offset-r2">
@@ -853,7 +923,7 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
               <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.length>0)
-                  return <div key={`cash-${w}`} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Casussen — week ${w}`)}>{list.length}</button>}</div>
+                  return <div key={`cash-${w}`} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Casussen — ${formatLesweek(w)}`)}>{list.length}</button>}</div>
                 })}
               </div>
               <div className="wm-vraak sticky-right offset-r2">
@@ -1046,7 +1116,7 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
               <div className="wm-cells" onClick={(e)=>{ if((e.target as HTMLElement).closest('.wm-chip')) e.stopPropagation() }}>
                 {weeks.map(w => {
                   const list = (plan.artifacts||[]).filter(a=> a.week===w && a.knowledgeIds.length>0)
-                  return <div key={`kenh-${w}`} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Kennis — week ${w}`)}>{list.length}</button>}</div>
+                  return <div key={`kenh-${w}`} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>{list.length>0 && <button className="wm-chip" onClick={()=> openPreview(list as any, `Kennis — ${formatLesweek(w)}`)}>{list.length}</button>}</div>
                 })}
               </div>
               <div className="wm-vraak sticky-right offset-r2">
@@ -1232,7 +1302,7 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
                 <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
                   <KindIcon kind={a.kind} />
                   <strong style={{flex:1}}>{a.name}</strong>
-                  <span className="muted">Week {a.week}</span>
+                  <span className="muted">{formatLesweek(a.week)}</span>
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:8}}>
                   <span className="sep" />
@@ -1269,32 +1339,53 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
             <h3 style={{margin:'6px 0'}}>VRAAK – {vraakDetail.title}</h3>
             <button className="wm-smallbtn" onClick={()=> setVraakDetail(null)}>Sluiten</button>
           </div>
-          <div className="vraak-bars" style={{height:220, display:'flex', alignItems:'flex-end', justifyContent:'center', gap:12, padding:'0 2px'}}>
-            {(()=>{
-              const bars = vraakDetail.bars
-              const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
-              return (
-                <>
-                  {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> (
-                    <div key={i} className="bar" style={{height:'100%', width:22}}>
-                      <div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} />
-                      <div className="lbl">{lbl}</div>
-                    </div>
-                  ))}
-                </>
-              )
-            })()}
+          <div style={{background:'rgba(255,160,0,.12)', border:'1px solid rgba(255,160,0,.4)', color:'#f0c27b', padding:8, borderRadius:8, marginBottom:10, fontSize:12}}>
+            Let op: deze VRAAK‑diagram met berekende waardes per VRAAK‑criterium is een hulpmiddel. Beoordeel altijd holistisch met oog voor context; de berekening is indicatief en doet nooit volledig recht aan de totale situatie.
           </div>
-          <div style={{marginTop:10}}>
-            <ul className="muted" style={{lineHeight:1.5}}>
-              <li><strong>V – Variatie</strong>: mix van soorten bewijs, perspectieven en spreiding over de tijdspanne van het portfolio.</li>
-              <li><strong>R – Relevantie</strong>: gemiddelde van je eigen relevantiescores.</li>
-              <li><strong>A – Authenticiteit</strong>: hoogste authenticiteit over subonderdelen of gemiddeld per rij.</li>
-              <li><strong>A – Actualiteit</strong>: recenter bewijs weegt zwaarder.</li>
-              <li><strong>K – Kwantiteit</strong>: aantal bewijzen ten opzichte van een richtwaarde.</li>
-            </ul>
-            <div className="muted" style={{fontSize:12, marginTop:8}}>
-              Deze VRAAK‑scores zijn indicatief en afhankelijk van je eigen inschatting per toegevoegd bewijsstuk.
+          <div style={{display:'grid', gridTemplateColumns:'minmax(220px,280px) 1fr', gap:16, alignItems:'start'}}>
+            <div className="vraak-bars" style={{height:240, display:'flex', alignItems:'flex-end', justifyContent:'center', gap:12, padding:'0 2px'}}>
+              {(()=>{
+                const bars = vraakDetail.bars as any
+                const meta = (bars && (bars as any).meta) || undefined
+                const toPct = (v:number)=> `${(Math.max(1,Math.min(5,v))-1)/4*100}%`
+                return (
+                  <>
+                    {[['V',bars.v],['R',bars.r],['A',bars.a1],['A',bars.a2],['K',bars.k]].map(([lbl,val],i)=> {
+                      const title = (()=>{
+                        if(lbl==='V' && meta?.variation){
+                          const m = meta.variation
+                          return [
+                            'Variatie (1/3 elk):',
+                            `• Soorten bewijs: ${m.kindsCount} / ${m.kindsMax} (≥3 = max)`,
+                            `• Perspectieven: ${m.persp.presentCount} / ${m.persp.max} (docent, zelfreflectie, hf2-3, en student‑p of hf1)`,
+                            `• Tijdspreiding: ${m.time.filled} / ${m.time.total} segmenten (vroeg/midden/laat)`
+                          ].join('\n')
+                        }
+                        if(lbl==='R') return 'Relevantie: gemiddelde van eigen scores'
+                        if(lbl==='A' && i===2) return 'Authenticiteit: hoogste per subonderdeel of gemiddeld'
+                        if(lbl==='A' && i===3) return 'Actualiteit: recenter bewijs weegt zwaarder'
+                        if(lbl==='K') return 'Kwantiteit: aantal bewijzen t.o.v. richtwaarde'
+                        return ''
+                      })()
+                      return (
+                      <div key={i} className="bar" style={{height:'100%', width:22}} title={title}>
+                        <div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} />
+                        <div className="lbl">{lbl}</div>
+                      </div>)
+                    })}
+                  </>
+                )
+              })()}
+            </div>
+            <div style={{marginTop:0}}>
+              <ul className="muted" style={{lineHeight:1.6, marginTop:0}}>
+                <li><strong>V – Variatie</strong>: combinatie van (1) meerdere soorten bewijs, (2) verplichte perspectieven aanwezig (docent, zelfreflectie, student‑hf2‑3 en student‑p of student‑hf1), en (3) spreiding over tijd (vroeg/midden/laat van de geselecteerde periode).</li>
+                <li><strong>R – Relevantie</strong>: gemiddelde van je eigen relevantiescores.</li>
+                <li><strong>A – Authenticiteit</strong>: hoogste authenticiteit per subonderdeel of het gemiddelde per rij.</li>
+                <li><strong>A – Actualiteit</strong>: recenter bewijs weegt zwaarder.</li>
+                <li><strong>K – Kwantiteit</strong>: aantal bewijzen t.o.v. een richtwaarde.</li>
+              </ul>
+              <div className="muted" style={{fontSize:12, marginTop:8}}>Tip: beweeg met je muis over de balken voor een korte uitleg per score.</div>
             </div>
           </div>
         </div>
@@ -1370,7 +1461,7 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
                 if(entries.length===0) return (<div className="muted">—</div>)
                 return entries.map(([w, list]) => (
                   <div key={w} style={{border:'1px solid var(--line-strong)', borderRadius:8, padding:8, background:'var(--surface2)'}}>
-                    <div style={{fontWeight:600, marginBottom:6}}>Week {w}</div>
+                    <div style={{fontWeight:600, marginBottom:6}}>{formatLesweek(w)}</div>
                     <div style={{display:'grid', gap:6}}>
                       {list.map(a => (
                         <button key={a.id} className="wm-art" style={{['--kind-color' as any]: colorForKind(a.kind)}} onClick={()=> openPreview([a], a.name)}>
@@ -1405,4 +1496,4 @@ function WeekMatrix({ plan, onEdit }: Props, ref: Ref<WeekMatrixHandle>){
   )
 }
 
-export default forwardRef<WeekMatrixHandle, Props>(WeekMatrix)
+
