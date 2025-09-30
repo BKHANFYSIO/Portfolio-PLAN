@@ -787,7 +787,7 @@ export default function PlanDetail(){
                               <div className="mini-evl-header" style={{gridTemplateColumns: gridTemplate, gridColumn: `1 / span ${colCount}`, gridRow:1}}>
                                 {allCols.map(col=> (
                                   col.sub && col.sub.length>0 ? (
-                                    col.sub.map((sid, sIdx) => {
+                                    col.sub.map((sid) => {
                                       const head = sid===col.key
                                       let text = head ? col.label : sid
                                       let tt = head ? (col.full||col.label) : sid
