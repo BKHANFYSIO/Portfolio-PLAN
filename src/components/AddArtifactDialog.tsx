@@ -5,9 +5,17 @@ import type { EvidenceAgeBracket } from '../lib/storage'
 import type { PerspectiveKey } from '../lib/storage'
 import { getCurriculumForYear, getYears } from '../lib/curriculum'
 
-type Props = { plan: PortfolioPlan; onClose: ()=>void; onSaved: (a:Artifact)=>void }
+type Props = {
+  plan: PortfolioPlan;
+  onClose: ()=>void;
+  onSaved: (a:Artifact)=>void;
+  initialWeek?: number;
+  initialEvlOutcomeId?: string;
+  initialCaseId?: string;
+  initialKnowledgeId?: string;
+}
 
-export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
+export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek, initialEvlOutcomeId, initialCaseId, initialKnowledgeId }: Props){
   const { evl, courses } = getCurriculumForYear(plan.year)
   const course = courses.find(c=>c.id===plan.courseId)
   const yearWeeks = getYears().find(y=>y.year===plan.year)?.weeks || []
@@ -85,6 +93,14 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
     if(visibleWeeks.length && week==='') setWeek(visibleWeeks[0])
   }, [visibleWeeks])
 
+  // Prefill vanuit matrix-klik
+  useEffect(()=>{
+    if(initialWeek){ setWeek(initialWeek) }
+    if(initialEvlOutcomeId){ setEvlOutcomeIds([initialEvlOutcomeId]) }
+    if(initialCaseId){ setCaseIds([initialCaseId]) }
+    if(initialKnowledgeId){ setKnowledgeIds([initialKnowledgeId]) }
+  }, [initialWeek, initialEvlOutcomeId, initialCaseId, initialKnowledgeId])
+
   function toggle<T extends string>(arr: T[], v: T, set:(x:T[])=>void){
     set(arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v])
   }
@@ -113,7 +129,10 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog" onClick={e=>e.stopPropagation()}>
-        <h3>Bewijsstuk toevoegen</h3>
+        <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+          <h3 style={{margin:0}}>Bewijsstuk toevoegen</h3>
+          <button className="wm-smallbtn" onClick={onClose}>Sluiten</button>
+        </div>
         <div style={{display:'flex', gap:8, marginBottom:8}} className="toggle-group">
           <button
             className={`file-label toggle${mode==='wizard' ? ' active' : ''}`}
@@ -321,7 +340,8 @@ export default function AddArtifactDialog({ plan, onClose, onSaved }: Props){
 
         {mode==='wizard' ? (
           <div className="dialog-actions">
-            {step>0 ? <button onClick={()=>setStep(step-1)}>Terug</button> : <button onClick={onClose}>Annuleren</button>}
+            <button onClick={onClose}>Annuleren</button>
+            {step>0 && <button onClick={()=>setStep(step-1)}>Terug</button>}
             {step<(TOTAL_STEPS-1) ? (
               <button
                 onClick={()=>{ if(step===0 && startChoice==='template' && chosenTemplate){ applyTemplateByName(chosenTemplate) } setStep(step+1) }}

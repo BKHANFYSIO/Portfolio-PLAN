@@ -6,7 +6,6 @@ import { LS_KEYS, readJson, writeJson } from '../lib/storage'
 import type { PortfolioPlan } from '../lib/storage'
 import './planDetail.css'
 import AddArtifactDialog from '../components/AddArtifactDialog'
-import Modal from '../components/Modal'
 import WeekMatrix from '../components/WeekMatrix'
 import { getYears } from '../lib/curriculum'
 import { KindIcon, PerspectiveIcon } from '../components/icons'
@@ -43,6 +42,7 @@ export default function PlanDetail(){
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showOrientation, setShowOrientation] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const swipeRef = useRef<{active:boolean; x:number; y:number}>({active:false,x:0,y:0})
   const [editForm, setEditForm] = useState({
     name: plan?.name || '',
     periodType: (plan?.period?.type as 'periode'|'semester'|'maatwerk') || 'periode',
@@ -143,6 +143,15 @@ export default function PlanDetail(){
     if(!document.fullscreenElement){ el.requestFullscreen?.(); }
     else{ document.exitFullscreen?.() }
   }
+
+  // Globale hook waarmee de matrix de add-dialoog kan openen met voorselecties
+  useEffect(()=>{
+    ;(window as any)._pf_openAddFromMatrix = (prefill: {week?:number; evlOutcomeId?:string; caseId?:string; knowledgeId?:string}) => {
+      ;(window as any)._pf_prefill = prefill
+      setShowAdd(true)
+    }
+    return ()=>{ if((window as any)._pf_openAddFromMatrix){ delete (window as any)._pf_openAddFromMatrix } }
+  }, [])
 
   function getVisibleWeekNumbers(p: PortfolioPlan['period']){
     const all = yearWeeks
@@ -508,18 +517,32 @@ export default function PlanDetail(){
         </main>
       </section>
 
-      {showAdd && <AddArtifactDialog plan={{...plan, name: localName}} onClose={()=>setShowAdd(false)} onSaved={()=>{}} />}
+      {showAdd && <AddArtifactDialog plan={{...plan, name: localName}} onClose={()=>setShowAdd(false)} onSaved={()=>{}} initialWeek={(window as any)._pf_prefill?.week} initialEvlOutcomeId={(window as any)._pf_prefill?.evlOutcomeId} initialCaseId={(window as any)._pf_prefill?.caseId} initialKnowledgeId={(window as any)._pf_prefill?.knowledgeId} />}
 
       {showMobileMenu && (
-        <Modal open={showMobileMenu} onClose={()=> setShowMobileMenu(false)} title="Menu" size="sm">
-          <div className="menu-list" style={{display:'grid', gap:8}}>
-            <Link className="btn" to="/" onClick={()=> setShowMobileMenu(false)}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Terug</Link>
-            <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowAdd(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Bewijsstuk toevoegen</button>
-            <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowList(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Alle bewijsstukken</button>
-            <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowPdfGuide(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2h10l4 4v16H4z"/><path d="M14 2v4h4"/></svg> PDF</button>
-            <button className="btn" onClick={()=>{ setShowMobileMenu(false); openEdit() }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg> Bewerken</button>
+        <div
+          className="modal-backdrop"
+          onClick={()=> setShowMobileMenu(false)}
+          onTouchStart={(e)=>{ const t=e.touches[0]; swipeRef.current={active:true,x:t.clientX,y:t.clientY}; }}
+          onTouchMove={(e)=>{ if(!swipeRef.current.active) return; const t=e.touches[0]; const dx=Math.abs(t.clientX-swipeRef.current.x); const dy=Math.abs(t.clientY-swipeRef.current.y); if(dx>80 && dx>dy){ setShowMobileMenu(false); swipeRef.current.active=false } }}
+          onTouchEnd={()=>{ swipeRef.current.active=false }}
+        >
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>Menu</h3>
+              <button className="icon-btn" aria-label="Sluiten" onClick={()=> setShowMobileMenu(false)}>
+                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+            <div className="modal-body menu-list" style={{display:'grid', gap:8}}>
+              <Link className="btn" to="/" onClick={()=> setShowMobileMenu(false)}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Terug</Link>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowAdd(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Bewijsstuk toevoegen</button>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowList(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Alle bewijsstukken</button>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); setShowPdfGuide(true) }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2h10l4 4v16H4z"/><path d="M14 2v4h4"/></svg> PDF</button>
+              <button className="btn" onClick={()=>{ setShowMobileMenu(false); openEdit() }}><svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg> Bewerken</button>
+            </div>
           </div>
-        </Modal>
+        </div>
       )}
 
       {showOrientation && (
@@ -537,24 +560,31 @@ export default function PlanDetail(){
       )}
 
       {showPdfGuide && (
-        <Modal open={showPdfGuide} onClose={()=>setShowPdfGuide(false)} title="PDF export – beste resultaat" size="md" footer={(
-          <>
-            <button className="file-label" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
-            <button className="file-label" onClick={exportPdfCurrentView}>PDF van huidige weergave</button>
-            <button className="btn" onClick={exportPdfHalves}>Exporteer in twee helften</button>
-          </>
-        )}>
-          <ul>
-            <li>Zoom eerst zó in dat alle lesweken zichtbaar zijn in de matrix.</li>
-            <li>Sluit deze pop‑up en controleer of je echt alle kolommen ziet.</li>
-            <li>Is de tekst te klein? Kies “Exporteer in twee helften”.</li>
-          </ul>
-        </Modal>
+        <div className="dialog-backdrop" onClick={()=>setShowPdfGuide(false)}>
+          <div className="dialog" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>PDF export – beste resultaat</h3>
+              <button className="wm-smallbtn" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
+            </div>
+            <ul>
+              <li>Zoom eerst zó in dat alle lesweken zichtbaar zijn in de matrix.</li>
+              <li>Sluit deze pop‑up en controleer of je echt alle kolommen ziet.</li>
+              <li>Is de tekst te klein? Kies “Exporteer in twee helften”.</li>
+            </ul>
+            <div className="dialog-actions">
+              <button className="file-label" onClick={exportPdfCurrentView}>PDF van huidige weergave</button>
+              <button className="btn" onClick={exportPdfHalves}>Exporteer in twee helften</button>
+            </div>
+          </div>
+        </div>
       )}
       {showEdit && (
         <div className="modal-backdrop" onClick={()=>setShowEdit(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3>Plan bewerken</h3>
+            <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>Plan bewerken</h3>
+              <button className="wm-smallbtn" onClick={()=>setShowEdit(false)}>Sluiten</button>
+            </div>
             {liveOutside && (
               <div style={{background:'rgba(255,160,0,.12)', border:'1px solid rgba(255,160,0,.4)', color:'#f0c27b', padding:8, borderRadius:8, marginBottom:8}}>
                 Let op: {liveOutside.length} bewijsstuk(ken) vallen buiten de huidige selectie.
@@ -636,8 +666,13 @@ export default function PlanDetail(){
         </div>
       )}
       {showList && (
-        <Modal open={showList} onClose={()=>setShowList(false)} title="Alle bewijsstukken" size="lg" footer={(<button className="btn" onClick={()=>setShowList(false)}>Sluiten</button>)}>
-          <div>
+        <div className="modal-backdrop" onClick={()=>setShowList(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>Alle bewijsstukken</h3>
+              <button className="wm-smallbtn" onClick={()=>setShowList(false)}>Sluiten</button>
+            </div>
+            <div className="modal-body">
             {(() => {
               const visibleSet = new Set(getVisibleWeekNumbers({ ...plan.period }))
               const outside = (plan.artifacts||[]).filter((a:any)=> !visibleSet.has(a.week))
@@ -748,9 +783,54 @@ export default function PlanDetail(){
                         {/* week-header verwijderd; we tonen de kolomkoppen in de eerste itemrij voor perfecte uitlijning */}
                         <ul>
                       {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any, idx:number) => (
-                        <li key={a.id} style={{display:'grid', gridTemplateColumns:`minmax(0,1fr) auto`, alignItems:'center', gap:8}}>
+                        <li key={a.id} style={{display:'grid', gridTemplateColumns:`minmax(0,1fr) auto`, alignItems:'start', gap:8}}>
                           <div style={{display:'grid', gap:2, minWidth:0}}>
-                            <div style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{a.name}</div>
+                            <div style={{display:'inline-flex', alignItems:'center', gap:6}}>
+                              <span
+                                className="size-dot"
+                                title={(function(){
+                                  const rel=Math.max(0,Math.min(5,Number((a as any)?.vraak?.relevantie||0)))
+                                  const auth=Math.max(0,Math.min(5,Number((a as any)?.vraak?.authenticiteit||0)))
+                                  const base=(rel+auth)/10
+                                  const ps=Array.isArray((a as any)?.perspectives)?(a as any).perspectives as string[]:[]
+                                  const weightFor=(p:string)=>{const k=String(p||'').toLowerCase(); if(k==='zelfreflectie') return 1; if(k==='student-p'||k==='student-hf1') return 1.05; if(k==='student-hf2-3'||k==='patient') return 1.10; if(k==='docent'||k==='stagebegeleider') return 1.20; return 1}
+                                  const boost=ps.length?Math.max(...ps.map(weightFor)):1
+                                  const score01=Math.max(0,Math.min(1, base*boost))
+                                  return `Omvang van bewijsstuk — ${(score01*100).toFixed(0)}/100`
+                                })()}
+                                style={{
+                                  width:(function(){
+                                    const rel=Math.max(0,Math.min(5,Number((a as any)?.vraak?.relevantie||0)))
+                                    const auth=Math.max(0,Math.min(5,Number((a as any)?.vraak?.authenticiteit||0)))
+                                    const base=(rel+auth)/10
+                                    const ps=Array.isArray((a as any)?.perspectives)?(a as any).perspectives as string[]:[]
+                                    const weightFor=(p:string)=>{const k=String(p||'').toLowerCase(); if(k==='zelfreflectie') return 1; if(k==='student-p'||k==='student-hf1') return 1.05; if(k==='student-hf2-3'||k==='patient') return 1.10; if(k==='docent'||k==='stagebegeleider') return 1.20; return 1}
+                                    const boost=ps.length?Math.max(...ps.map(weightFor)):1
+                                    const score01=Math.max(0,Math.min(1, base*boost))
+                                    const sizes=[10,14,18,22,28]
+                                    const selIdx=Math.min(sizes.length-1, Math.max(0, Math.round(score01*(sizes.length-1))))
+                                    return sizes[selIdx]
+                                  })(),
+                                  height:(function(){
+                                    const rel=Math.max(0,Math.min(5,Number((a as any)?.vraak?.relevantie||0)))
+                                    const auth=Math.max(0,Math.min(5,Number((a as any)?.vraak?.authenticiteit||0)))
+                                    const base=(rel+auth)/10
+                                    const ps=Array.isArray((a as any)?.perspectives)?(a as any).perspectives as string[]:[]
+                                    const weightFor=(p:string)=>{const k=String(p||'').toLowerCase(); if(k==='zelfreflectie') return 1; if(k==='student-p'||k==='student-hf1') return 1.05; if(k==='student-hf2-3'||k==='patient') return 1.10; if(k==='docent'||k==='stagebegeleider') return 1.20; return 1}
+                                    const boost=ps.length?Math.max(...ps.map(weightFor)):1
+                                    const score01=Math.max(0,Math.min(1, base*boost))
+                                    const sizes=[10,14,18,22,28]
+                                    const selIdx=Math.min(sizes.length-1, Math.max(0, Math.round(score01*(sizes.length-1))))
+                                    return sizes[selIdx]
+                                  })(),
+                                  background:'#a78bfa',
+                                  boxShadow:'0 0 0 2px rgba(167,139,250,.35)',
+                                  flex:'0 0 auto',
+                                  marginLeft:-14
+                                }}
+                              />
+                              <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{a.name}</span>
+                            </div>
                             <div style={{display:'inline-flex',alignItems:'center',gap:8, minWidth:0, paddingLeft:18}}>
                               <span title={String(a.kind||'')} style={{display:'inline-flex',alignItems:'center',gap:4}}>
                                 <KindIcon kind={a.kind} />
@@ -764,7 +844,7 @@ export default function PlanDetail(){
                               )}
                             </div>
                           </div>
-                          <div className="mini-evl-grid" style={{gridTemplateColumns:`${gridTemplate} auto`, ['--mini-evl-colw' as any]:'24px'}}>
+                          <div className="mini-evl-grid" style={{gridTemplateColumns:`${gridTemplate} auto`, ['--mini-evl-colw' as any]:'24px', alignSelf:'start', marginTop: (idx===0 ? -26 : 0)}}>
                             {idx===0 && (
                               <div className="mini-evl-header" style={{gridTemplateColumns: gridTemplate, gridColumn: `1 / span ${colCount}`, gridRow:1}}>
                                 {allCols.map(col=> (
@@ -871,20 +951,20 @@ export default function PlanDetail(){
                                   }
                                 })}
                             </div>
-                            <span className="action-row" style={{justifySelf:'end', gridColumn: colCount+1, gridRow: idx===0? 1: '1'}}>
-                                <button className="action-icon" onClick={()=>startEditArtifact(a)} title="Bewerken" aria-label="Bewerken">
-                                  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/><path d="M20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
-                                </button>
-                                <button className="action-icon" onClick={()=> downloadIcsForArtifact(a)} title="Agenda (.ics)" aria-label="Agenda (.ics)" style={{color:'#2b8aef'}}>
-                                  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <rect x="3" y="4" width="18" height="17" rx="2" ry="2" stroke="currentColor" fill="none" strokeWidth="2"/>
-                                    <path d="M7 2v4M17 2v4M3 9h18" stroke="currentColor" fill="none" strokeWidth="2"/>
-                                    <path d="M12 12v5M9.5 14.5H14.5" stroke="currentColor" fill="none" strokeWidth="2"/>
-                                  </svg>
-                                </button>
-                                <button className="action-icon" onClick={()=>deleteArtifact(a.id)} title="Verwijderen" aria-label="Verwijderen" style={{color:'#ff6b6b'}}>
-                                  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>
-                                </button>
+                            <span className="action-row" style={{justifySelf:'end', gridColumn: colCount+1, gridRow: idx===0? 2: 1}}>
+                              <button className="action-icon" onClick={()=>startEditArtifact(a)} title="Bewerken" aria-label="Bewerken">
+                                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/><path d="M20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+                              </button>
+                              <button className="action-icon" onClick={()=> downloadIcsForArtifact(a)} title="Agenda (.ics)" aria-label="Agenda (.ics)" style={{color:'#2b8aef'}}>
+                                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                  <rect x="3" y="4" width="18" height="17" rx="2" ry="2" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                  <path d="M7 2v4M17 2v4M3 9h18" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                  <path d="M12 12v5M9.5 14.5H14.5" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                </svg>
+                              </button>
+                              <button className="action-icon" onClick={()=>deleteArtifact(a.id)} title="Verwijderen" aria-label="Verwijderen" style={{color:'#ff6b6b'}}>
+                                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>
+                              </button>
                             </span>
                           </div>
                         </li>
@@ -898,21 +978,24 @@ export default function PlanDetail(){
                 </>
               )
             })()}
+            </div>
           </div>
-        </Modal>
+        </div>
       )}
 
       {showPdfGuide && (
         <div className="dialog-backdrop" onClick={()=>setShowPdfGuide(false)}>
           <div className="dialog" onClick={e=>e.stopPropagation()}>
-            <h3>PDF export – beste resultaat</h3>
+            <div className="modal-header" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <h3 style={{margin:0}}>PDF export – beste resultaat</h3>
+              <button className="wm-smallbtn" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
+            </div>
             <ul>
               <li>Zoom eerst zó in dat alle lesweken zichtbaar zijn in de matrix.</li>
               <li>Sluit deze pop‑up en controleer of je echt alle kolommen ziet.</li>
               <li>Is de tekst te klein? Kies “Exporteer in twee helften”.</li>
             </ul>
             <div className="dialog-actions">
-              <button className="file-label" onClick={()=>setShowPdfGuide(false)}>Sluiten</button>
               <button className="file-label" onClick={exportPdfCurrentView}>PDF van huidige weergave</button>
               <button className="btn" onClick={exportPdfHalves}>Exporteer in twee helften</button>
             </div>

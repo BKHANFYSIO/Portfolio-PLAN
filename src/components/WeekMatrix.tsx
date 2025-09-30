@@ -785,7 +785,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 return <div key={`evlh-${block.id}-${w}`} className="wm-cell"
                   onDragOver={(e)=>{ e.preventDefault() }}
                   onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}
-                >{list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — ${formatLesweek(w)}`) }}>{list.length}</button>}</div>
+                >
+                  {list.length>0 && <button className="wm-chip" onClick={(e)=>{ e.stopPropagation(); openPreview(list as any, `${block.id} · ${block.name} — ${formatLesweek(w)}`) }}>{list.length}</button>}
+                </div>
                   })}
                 </div>
                 <div className="wm-vraak sticky-right offset-r2">
@@ -849,7 +851,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {weeks.map(w => {
                     const list = artifactsIn(o.id, w)
                     return (
-                      <div key={w} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>
+                      <div key={w} className={`wm-cell ${list.length===0 ? 'empty' : 'hasitems'}`} onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }} onClick={()=>{ if(list.length===0){ (window as any)._pf_openAddFromMatrix?.({ week: w, evlOutcomeId: o.id }) } }}>
                         {list.length>0 ? (
                           <div className="wm-artlist">
                             {list.map((a:any)=> {
@@ -909,6 +911,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                             })}
                           </div>
                         ) : null}
+                        {list.length>0 && <button className="wm-addbtn" title="Bewijsstuk toevoegen" onClick={(e)=>{ e.stopPropagation(); (window as any)._pf_openAddFromMatrix?.({ week: w, evlOutcomeId: o.id }) }}>+</button>}
                       </div>
                     )
                   })}
@@ -1042,7 +1045,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.caseIds.includes(c.id))
                     return (
-                      <div key={w} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>
+                      <div key={w} className={`wm-cell ${list.length===0 ? 'empty' : 'hasitems'}`} onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }} onClick={()=>{ if(list.length===0){ (window as any)._pf_openAddFromMatrix?.({ week: w, caseId: c.id }) } }}>
                         {list.length>0 ? (
                           <div className="wm-artlist">
                             {list.map((a:any)=> {
@@ -1100,6 +1103,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                             })}
                           </div>
                         ) : null}
+                        {list.length>0 && <button className="wm-addbtn" title="Bewijsstuk toevoegen" onClick={(e)=>{ e.stopPropagation(); (window as any)._pf_openAddFromMatrix?.({ week: w, caseId: c.id }) }}>+</button>}
                       </div>
                     )
                   })}
@@ -1227,7 +1231,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {weeks.map(w => {
                     const list = (plan.artifacts||[]).filter(a=> a.week===w && a.knowledgeIds.includes(k.id))
                     return (
-                      <div key={w} className="wm-cell" onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }}>
+                      <div key={w} className={`wm-cell ${list.length===0 ? 'empty' : 'hasitems'}`} onDragOver={(e)=>{ e.preventDefault() }} onDrop={(e)=>{ const id = e.dataTransfer?.getData('text/plain'); if(id){ moveArtifactToWeek(id, w) } }} onClick={()=>{ if(list.length===0){ (window as any)._pf_openAddFromMatrix?.({ week: w, knowledgeId: k.id }) } }}>
                         {list.length>0 ? (
                           <div className="wm-artlist">
                             {list.map((a:any)=> {
@@ -1267,6 +1271,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                             })}
                           </div>
                         ) : null}
+                        {list.length>0 && <button className="wm-addbtn" title="Bewijsstuk toevoegen" onClick={(e)=>{ e.stopPropagation(); (window as any)._pf_openAddFromMatrix?.({ week: w, knowledgeId: k.id }) }}>+</button>}
                       </div>
                     )
                   })}

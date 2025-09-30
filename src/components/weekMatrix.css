@@ -132,6 +132,14 @@
 .wm-mask-left{ position:sticky; left:0; bottom:0; width:var(--leftWidth); height:12px; background:var(--surface); z-index:5 }
 
 /* Altijd-zichtbare horizontale scroll-balk gesynchroniseerd met inhoud */
+
+/* Hover hint voor lege cellen */
+.wm-cell.empty{ position:relative }
+.wm-cell.empty::after{
+  content:'+'; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  color: var(--muted); opacity:0; font-weight:700; pointer-events:none; transition: opacity .12s ease;
+}
+.wm-cell.empty:hover::after, .wm-cell.empty:focus-within::after{ opacity:.7 }
 .wm-hscroll{ position:sticky; bottom:0; left:0; right:0; height:14px; overflow-x:auto; overflow-y:hidden; background:transparent; z-index:20 }
 .wm-hspacer{ height:1px }
 .sticky-bottom{ position:sticky }
@@ -144,4 +152,9 @@
 
 /* Subtitel-rijen: cellen in lesweekkolommen dezelfde achtergrond als basis (wit in light mode) */
 .wm-row .wm-cells .wm-cell{ background:var(--surface) }
+
+/* Add-knop bij cellen met items */
+.wm-addbtn{ position:absolute; right:6px; bottom:6px; width:18px; height:18px; border-radius:50%; background:rgba(255,255,255,.10); border:1px solid var(--line-strong); color:var(--text); display:flex; align-items:center; justify-content:center; font-weight:700; opacity:0; transition:opacity .12s ease; cursor:pointer }
+.wm-cell.hasitems:hover .wm-addbtn, .wm-cell.hasitems:focus-within .wm-addbtn{ opacity:.9 }
+.wm-cell.hasitems .wm-addbtn:hover{ background:rgba(255,255,255,.18) }
 
