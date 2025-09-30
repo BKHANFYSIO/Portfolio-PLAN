@@ -22,6 +22,7 @@ export default function PlanDetail(){
   const [localName, setLocalName] = useState(plan?.name || '')
   const [localPeriod, setLocalPeriod] = useState<PortfolioPlan['period']>(plan?.period)
   const [showList, setShowList] = useState(false)
+  const [expandedEvl, setExpandedEvl] = useState<string|null>(null)
   const [outOfRangeIds, setOutOfRangeIds] = useState<string[]|null>(null)
   const [editArtifactId, setEditArtifactId] = useState<string|null>(null)
   const [editArtifactName, setEditArtifactName] = useState('')
@@ -60,6 +61,64 @@ export default function PlanDetail(){
     const prefix = info.code ? 'Lesweek ' : ''
     const date = info.startISO ? ` · ${info.startISO}` : ''
     return `${prefix}${base}${date}`
+  }
+
+  // ICS export helpers
+  function toIcsDateYMD(d: Date){
+    const y = d.getFullYear().toString().padStart(4,'0')
+    const m = (d.getMonth()+1).toString().padStart(2,'0')
+    const dd = d.getDate().toString().padStart(2,'0')
+    return `${y}${m}${dd}`
+  }
+  function toIcsStampUTC(d: Date){
+    const y = d.getUTCFullYear().toString().padStart(4,'0')
+    const m = (d.getUTCMonth()+1).toString().padStart(2,'0')
+    const dd = d.getUTCDate().toString().padStart(2,'0')
+    const hh = d.getUTCHours().toString().padStart(2,'0')
+    const mm = d.getUTCMinutes().toString().padStart(2,'0')
+    const ss = d.getUTCSeconds().toString().padStart(2,'0')
+    return `${y}${m}${dd}T${hh}${mm}${ss}Z`
+  }
+  function downloadIcsForArtifact(a: any){
+    try{
+      const info = yearWeeks.find(w=> w.week===a.week)
+      // All-day event op startdatum van de lesweek
+      const start = info?.startISO ? new Date(`${info.startISO}T00:00:00`) : new Date()
+      const end = new Date(start.getTime() + 24*60*60*1000)
+      const dtStart = toIcsDateYMD(start)
+      const dtEnd = toIcsDateYMD(end)
+      const now = new Date()
+      const dtStamp = toIcsStampUTC(now)
+      const summary = (a.name||'Bewijsstuk')
+      const desc = [`Reminder voor bewijsstuk`, `Week: ${formatLesweek(a.week)}`, `Soort: ${a.kind||'—'}`].join(' \n ')
+      const uid = `${(a.id||Math.random().toString(36).slice(2))}@jouw-portfolio`
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Jouw Portfolio//NL',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `DTSTART;VALUE=DATE:${dtStart}`,
+        `DTEND;VALUE=DATE:${dtEnd}`,
+        `SUMMARY:${summary.replace(/\r|\n/g,' ')}`,
+        `DESCRIPTION:${desc.replace(/[\n\r]/g,' ')}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n')
+      const blob = new Blob([ics], { type:'text/calendar;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const aTag = document.createElement('a')
+      const safeName = `${summary}`.replace(/[^\w\-]+/g,'_').slice(0,80)
+      aTag.href = url
+      aTag.download = `${safeName || 'bewijsmoment'}.ics`
+      document.body.appendChild(aTag)
+      aTag.click()
+      document.body.removeChild(aTag)
+      URL.revokeObjectURL(url)
+    }catch{}
   }
 
   const centerRef = useRef<HTMLElement|null>(null)
@@ -607,6 +666,51 @@ export default function PlanDetail(){
                 const arr = weeksMap.get(a.week)
                 if(arr) arr.push(a)
               }
+              // Mini EVL kolommen
+              const { evl } = getCurriculumForYear(plan.year)
+              const evlCols = evl
+              const cases = course?.cases || []
+              const knowl = course?.knowledgeDomains || []
+              const caseIdSet = new Set((cases||[]).map((c:any)=> c.id))
+              const knowIdSet = new Set((knowl||[]).map((k:any)=> k.id))
+              // Helpers om consistente codes te tonen (1.1, 1.2, …) ook als imported curriculum alleen namen heeft
+              const codeFromOutcome = (evlKey: string, o: {id:string; name:string}, idx: number) => {
+                const id = String(o.id||'')
+                const name = String(o.name||'')
+                const m1 = id.match(/^(\d+)\.(\d+)$/)
+                if(m1) return `${m1[1]}.${m1[2]}`
+                const m2 = name.match(/^(\d+)\.(\d+)/)
+                if(m2) return `${m2[1]}.${m2[2]}`
+                const evlNum = Number(String(evlKey).replace(/[^0-9]/g,''))||0
+                return `${evlNum}.${idx+1}`
+              }
+              // Map om te bepalen bij welke EVL een outcome‑id/naam hoort (voor hoofdkolom‑markering)
+              const outcomeToEvl = new Map<string, string>()
+              for(const b of evlCols){
+                b.outcomes.forEach((o,idx)=>{
+                  const code = codeFromOutcome(b.id, o, idx)
+                  outcomeToEvl.set(o.id, b.id)
+                  outcomeToEvl.set(code, b.id)
+                  outcomeToEvl.set(o.name, b.id)
+                })
+              }
+              const normCode = (s: string) => {
+                const m = String(s||'').match(/(\d+)\.(\d+)/)
+                return m ? `${m[1]}.${m[2]}` : String(s||'').trim()
+              }
+              const evlIdOf = (outId: string) => {
+                const direct = outcomeToEvl.get(String(outId||''))
+                if(direct) return direct as any
+                const m = String(outId||'').match(/^(\d+)/)
+                return m ? (`EVL${m[1]}` as 'EVL1'|'EVL2'|'EVL3'|'EVL4'|'EVL5') : ('' as any)
+              }
+              const allCols: Array<{key:string; label:string; type:'evl'|'case'|'know'; sub?: string[]; full?: string}> = [
+                ...evlCols.map(b=> ({ key:b.id, label:b.id, full:b.name, type:'evl' as const, sub: expandedEvl===b.id ? [b.id, ...b.outcomes.map((o,idx)=> codeFromOutcome(b.id, o, idx))] : undefined })),
+                ...(cases.length? [{ key:'__CASE__', label:'Casus', type:'case' as const, full:'Casussen / Thema\'s', sub: expandedEvl==='__CASE__' ? ['__CASE__', ...cases.map(c=> c.id)] : undefined }]:[]),
+                ...(knowl.length? [{ key:'__KNOW__', label:'Kennis', type:'know' as const, full:'Kennisdomeinen', sub: expandedEvl==='__KNOW__' ? ['__KNOW__', ...knowl.map(k=> k.id)] : undefined }]:[]),
+              ]
+              const colCount = allCols.reduce((n,c)=> n + (c.sub?.length||1), 0)
+              const gridTemplate = `repeat(${colCount}, var(--mini-evl-colw, 24px))`
               return (
                 <>
                   {outside.length>0 && (
@@ -623,9 +727,20 @@ export default function PlanDetail(){
                                 </span>
                               )}
                             </span>
-                            <span>
-                              <button className="file-label" onClick={()=>startEditArtifact(a)}>Bewerken</button>
-                              <button className="danger" style={{marginLeft:6}} onClick={()=>deleteArtifact(a.id)}>Verwijderen</button>
+                            <span className="action-row">
+                              <button className="action-icon" onClick={()=>startEditArtifact(a)} title="Bewerken" aria-label="Bewerken">
+                                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/><path d="M20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+                              </button>
+                              <button className="action-icon" onClick={()=> downloadIcsForArtifact(a)} title="Agenda (.ics)" aria-label="Agenda (.ics)" style={{color:'#2b8aef'}}>
+                                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                  <rect x="3" y="4" width="18" height="17" rx="2" ry="2" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                  <path d="M7 2v4M17 2v4M3 9h18" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                  <path d="M12 12v5M9.5 14.5H14.5" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                </svg>
+                              </button>
+                              <button className="action-icon" onClick={()=>deleteArtifact(a.id)} title="Verwijderen" aria-label="Verwijderen" style={{color:'#ff6b6b'}}>
+                                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>
+                              </button>
                             </span>
                           </li>
                         ))}
@@ -635,26 +750,162 @@ export default function PlanDetail(){
               <div style={{fontWeight:600, marginTop:4}}>Binnen geselecteerde weken</div>
                   <ul>
                     {yearWeeks.filter(w=> visibleSet.has(w.week)).map(w => (
-                      <li key={w.week} style={{padding:'6px 0'}}>
-                        <div className="muted" style={{fontSize:12}}>{w.code||w.label}</div>
+                      <li key={w.week} style={{padding:'6px 0'}} className={(function(){
+                        const info = yearWeeks.find(y=>y.week===w.week)
+                        if(!info) return ''
+                        const now = new Date()
+                        const toDate = (s?:string, end?:boolean)=> s ? new Date(s + (end ? 'T23:59:59' : 'T00:00:00')) : null
+                        const start = toDate(info.startISO)
+                        const end = (info.endISO && info.endISO!==info.startISO) ? toDate(info.endISO, true) : (start ? new Date(start.getTime()+6*24*3600*1000) : null)
+                        if(start && end && now>=start && now<=end) return 'week-current'
+                        return ''
+                      })()}>
+                        {(()=>{ const info = yearWeeks.find(y=>y.week===w.week); const tt = info ? `${info?.label||info?.code||''} · ${info?.startISO}${info?.endISO&&info?.endISO!==info?.startISO ? ' — '+info.endISO:''}` : ''; return (
+                          <div className="muted" style={{fontSize:12}} title={tt}>{w.code||w.label}</div>
+                        )})()}
+                        {/* week-header verwijderd; we tonen de kolomkoppen in de eerste itemrij voor perfecte uitlijning */}
                         <ul>
-                      {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any) => (
-                        <li key={a.id} style={{display:'flex', justifyContent:'space-between', gap:8}}>
-                          <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
-                            <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-                              <KindIcon kind={a.kind} />
-                              {Array.isArray(a.perspectives) && a.perspectives.slice(0,3).map((p:string)=> (<PerspectiveIcon key={p} p={p as any} />))}
+                      {(weeksMap.get(w.week)||[]).length>0 ? (weeksMap.get(w.week)||[]).map((a:any, idx:number) => (
+                        <li key={a.id} style={{display:'grid', gridTemplateColumns:`minmax(0,1fr) auto`, alignItems:'center', gap:8}}>
+                          <div style={{display:'grid', gap:2, minWidth:0}}>
+                            <div style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{a.name}</div>
+                            <div style={{display:'inline-flex',alignItems:'center',gap:8, minWidth:0, paddingLeft:18}}>
+                              <span title={String(a.kind||'')} style={{display:'inline-flex',alignItems:'center',gap:4}}>
+                                <KindIcon kind={a.kind} />
+                              </span>
+                              <span className="muted" aria-hidden>|</span>
+                              {Array.isArray(a.perspectives) && a.perspectives.slice(0,3).map((p:string)=> (
+                                <span key={p} title={p}><PerspectiveIcon p={p as any} /></span>
+                              ))}
                               {Array.isArray(a.perspectives) && a.perspectives.length>3 && (
                                 <span className="muted" style={{fontSize:10}}>+{a.perspectives.length-3}</span>
                               )}
+                            </div>
+                          </div>
+                          <div className="mini-evl-grid" style={{gridTemplateColumns:`${gridTemplate} auto`, ['--mini-evl-colw' as any]:'24px'}}>
+                            {idx===0 && (
+                              <div className="mini-evl-header" style={{gridTemplateColumns: gridTemplate, gridColumn: `1 / span ${colCount}`, gridRow:1}}>
+                                {allCols.map(col=> (
+                                  col.sub && col.sub.length>0 ? (
+                                    col.sub.map((sid, sIdx) => {
+                                      const head = sid===col.key
+                                      let text = head ? col.label : sid
+                                      let tt = head ? (col.full||col.label) : sid
+                                      if(col.type==='evl' && !head){
+                                        const ev = evlCols.find(e=>e.id===col.key as any)
+                                        const idxMatch = ev ? ev.outcomes.findIndex((o,idx)=> codeFromOutcome(ev.id, o, idx)===sid) : -1
+                                        const name = (idxMatch>=0 && ev) ? ev.outcomes[idxMatch].name : ''
+                                        tt = name ? `${sid} · ${name}` : sid
+                                        text = sid
+                                      }
+                                      if(col.type==='case' && !head){
+                                        const idxIn = cases.findIndex(c=> c.id===sid)
+                                        const nm = cases[idxIn]?.name||''
+                                        tt = nm || sid
+                                        text = (nm || sid).slice(0,4)
+                                      }
+                                      if(col.type==='know' && !head){
+                                        const idxIn = knowl.findIndex(k=> k.id===sid)
+                                        const nm = knowl[idxIn]?.name||''
+                                        tt = nm || sid
+                                        text = (nm || sid).slice(0,4)
+                                      }
+                                      const lvlClass = col.type==='evl' ? (col.key==='EVL1' ? 'lvl-evl1' : col.key==='EVL2' ? 'lvl-evl2' : col.key==='EVL3' ? 'lvl-evl3' : col.key==='EVL4' ? 'lvl-evl4' : 'lvl-evl5') : (col.type==='case' ? 'lvl-case' : 'lvl-know')
+                                      return (
+                                        <div key={`wh-${w.week}-${col.key}-${sid}`} className={`mini-evl-colhead${head?' head':' sub'} ${lvlClass}`} title={tt}>
+                                          <button title={tt} onClick={()=> setExpandedEvl(prev=> prev===col.key? null : col.key)}>{text}</button>
+                                        </div>
+                                      )
+                                    })
+                                  ) : (
+                                    <div key={`wh-${w.week}-${col.key}`} className="mini-evl-colhead" title={col.full||col.label}><button onClick={()=> setExpandedEvl(prev=> prev===col.key? null : col.key)}>{col.label}</button></div>
+                                  )
+                                ))}
+                              </div>
+                            )}
+                            <div className="mini-evl-row" style={{gridTemplateColumns: gridTemplate, gridColumn: `1 / span ${colCount}`, gridRow: idx===0? 2: 1}} onClick={(e)=>{
+                              const target = e.target as HTMLElement
+                              const cell = target.closest('.mini-evl-cell') as HTMLElement | null
+                              if(!cell) return
+                              const rowEl = cell.parentElement
+                              if(!rowEl) return
+                              const cells = Array.from(rowEl.children).filter(el=> el.classList.contains('mini-evl-cell'))
+                              const idxCell = cells.indexOf(cell)
+                              let acc = 0
+                              for(const meta of allCols){
+                                const span = (meta.sub && meta.sub.length>0) ? meta.sub.length : 1
+                                if(idxCell>=acc && idxCell<acc+span){ setExpandedEvl(prev=> prev===meta.key? null : meta.key); break }
+                                acc += span
+                              }
+                            }}>
+                                {allCols.map(col=> {
+                                  if(col.type==='evl'){
+                                    if(col.sub && col.sub.length>0){
+                                      return col.sub.map(sid => {
+                                        if(sid===col.key){
+                                          const hasHead = (a.evlOutcomeIds||[]).some((id:string)=> evlIdOf(id)===col.key || normCode(id).startsWith(String(col.key).replace(/\D/g,'')+'.'))
+                                          const isSelected = expandedEvl===col.key
+                                          return <div key={`c-${a.id}-${col.key}-head`} className={`mini-evl-cell head${hasHead?' mark':''}${isSelected?' selected':''}`} />
+                                        }
+                                        const normIds = (a.evlOutcomeIds||[]).map(normCode)
+                                        const mark = normIds.includes(normCode(sid))
+                                        const lvlClass = col.type==='evl' ? (col.key==='EVL1' ? 'lvl-evl1' : col.key==='EVL2' ? 'lvl-evl2' : col.key==='EVL3' ? 'lvl-evl3' : col.key==='EVL4' ? 'lvl-evl4' : 'lvl-evl5') : (col.type==='case' ? 'lvl-case' : 'lvl-know')
+                                        return <div key={`c-${a.id}-${col.key}-${sid}`} className={`mini-evl-cell sub ${lvlClass}${mark?' submark':''}`} />
+                                      })
+                                    }
+                                    // hoofdkolom markeren als er één of meer subcategorieën zijn aangevinkt
+                                    const has = (a.evlOutcomeIds||[]).some((id:string)=> evlIdOf(id)===col.key || normCode(id).startsWith(String(col.key).replace(/\D/g,'')+'.'))
+                                    return <div key={`c-${a.id}-${col.key}`} className={`mini-evl-cell head${has?' mark':''}`} />
+                                  }
+                                  if(col.type==='case'){
+                                    if(col.sub && col.sub.length>0){
+                                      const lvlClass = 'lvl-case'
+                                      return col.sub.map(sid => {
+                                        if(sid===col.key){
+                                          const hasAny = (a.caseIds||[]).some((id:string)=> caseIdSet.has(id))
+                                          return <div key={`c-${a.id}-case-head`} className={`mini-evl-cell head ${lvlClass}${hasAny?' mark':''}`} title="Casus/Thema" />
+                                        }
+                                        const mark = (a.caseIds||[]).includes(sid)
+                                        return <div key={`c-${a.id}-case-${sid}`} className={`mini-evl-cell sub ${lvlClass}${mark?' submark':''}`} title="Casus/Thema" />
+                                      })
+                                    }
+                                    const has = (a.caseIds||[]).some((id:string)=> caseIdSet.has(id))
+                                    return <div key={`c-${a.id}-case`} className={`mini-evl-cell${has?' mark':''}`} title="Casus/Thema" />
+                                  }
+                                  if(col.type==='know'){
+                                    if(col.sub && col.sub.length>0){
+                                      const lvlClass = 'lvl-know'
+                                      return col.sub.map(sid => {
+                                        if(sid===col.key){
+                                          const hasAny = (a.knowledgeIds||[]).some((id:string)=> knowIdSet.has(id))
+                                          return <div key={`c-${a.id}-know-head`} className={`mini-evl-cell head ${lvlClass}${hasAny?' mark':''}`} title="Kennis" />
+                                        }
+                                        const mark = (a.knowledgeIds||[]).includes(sid)
+                                        return <div key={`c-${a.id}-know-${sid}`} className={`mini-evl-cell sub ${lvlClass}${mark?' submark':''}`} title="Kennis" />
+                                      })
+                                    }
+                                    const has = (a.knowledgeIds||[]).some((id:string)=> knowIdSet.has(id))
+                                    return <div key={`c-${a.id}-know`} className={`mini-evl-cell${has?' mark':''}`} title="Kennis" />
+                                  }
+                                })}
+                            </div>
+                            <span className="action-row" style={{justifySelf:'end', gridColumn: colCount+1, gridRow: idx===0? 1: '1'}}>
+                                <button className="action-icon" onClick={()=>startEditArtifact(a)} title="Bewerken" aria-label="Bewerken">
+                                  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/><path d="M20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+                                </button>
+                                <button className="action-icon" onClick={()=> downloadIcsForArtifact(a)} title="Agenda (.ics)" aria-label="Agenda (.ics)" style={{color:'#2b8aef'}}>
+                                  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="3" y="4" width="18" height="17" rx="2" ry="2" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                    <path d="M7 2v4M17 2v4M3 9h18" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                    <path d="M12 12v5M9.5 14.5H14.5" stroke="currentColor" fill="none" strokeWidth="2"/>
+                                  </svg>
+                                </button>
+                                <button className="action-icon" onClick={()=>deleteArtifact(a.id)} title="Verwijderen" aria-label="Verwijderen" style={{color:'#ff6b6b'}}>
+                                  <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>
+                                </button>
                             </span>
-                            {a.name}
-                          </span>
-                              <span>
-                                <button className="file-label" onClick={()=>startEditArtifact(a)}>Bewerken</button>
-                                <button className="danger" style={{marginLeft:6}} onClick={()=>deleteArtifact(a.id)}>Verwijderen</button>
-                              </span>
-                            </li>
+                          </div>
+                        </li>
                           )) : (
                             <li className="muted">—</li>
                           )}

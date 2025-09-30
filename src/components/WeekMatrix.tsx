@@ -761,17 +761,15 @@ export default function WeekMatrix({ plan, onEdit }: Props){
               const titleBase = info?.isHoliday ? (info?.holidayLabel || 'Vakantie') : (info?.label || baseCode)
               const ext = info?.kind==='zero' ? ' · 0-week' : ''
               const title = info ? `${titleBase} · ${info.startISO}${info.endISO && info.endISO!==info.startISO ? ' — '+info.endISO : ''}${ext}` : baseCode
-              return <div key={w} className={`wm-col ${info?.isHoliday ? 'holiday':''}`} title={title}>{label}</div>
+              const now = new Date()
+              const start = info?.startISO ? new Date(info.startISO+'T00:00:00') : null
+              const end = (info?.endISO && info.endISO!==info.startISO) ? new Date(info.endISO+'T23:59:59') : (start ? new Date(start.getTime()+6*24*3600*1000) : null)
+              const isCurrent = !!(start && end && now>=start && now<=end)
+              return <div key={w} className={`wm-col ${info?.isHoliday ? 'holiday':''} ${isCurrent? 'current':''}`} title={title}>{label}</div>
             })}
           </div>
           <div className="wm-vcol sticky-right offset-r2">VRAAK</div>
-          <div className="wm-scol sticky-right" title={
-            [
-              'Zelfinschatting van eigen beheersing (1–5).',
-              'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
-              'Op EVL- en categorie-rijen wordt automatisch het gemiddelde getoond.'
-            ].join('\n')
-          }>Beheersing</div>
+          <div className="wm-scol sticky-right">Beheersing</div>
         </div>
         <div className="wm-body">
           {evlForCourse.map(block => (
@@ -825,16 +823,12 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                       const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                       return (
-                        <div className="self-tile" aria-hidden title={[
-                          'Gemiddelde van je eigen scores over de leeruitkomsten binnen deze EVL.',
-                          "Gebruik de knop 'reset' om de zelf gescoorde beheersing voor deze EVL te wissen.",
-                          `Gemiddeld: ${avg.toFixed(1)}`
-                        ].join('\n')} style={{ background: colorFor(avg) }}>
+                        <div className="self-tile" aria-hidden style={{ background: colorFor(avg) }}>
                           <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                           <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                             setSelfLevels(cur=>{ const next={...cur}; for(const id of outcomeIds) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
                           }}>reset</button>
-                          <div className="val">{avg.toFixed(1)}</div>
+                          {/* geen numerieke weergave */}
                         </div>
                       )
                     })()
@@ -949,8 +943,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       const onPointer = (clientX: number, el: HTMLDivElement)=>{
                         const rect = el.getBoundingClientRect()
                         const rel = (clientX - rect.left) / rect.width
-                        const step = Math.min(5, Math.max(1, Math.round(rel*5)))
-                        setVal(step)
+                        const clamped = Math.max(0, Math.min(1, rel))
+                        const value = 1 + Math.round(clamped * 8) / 2 // 0.5 stappen tussen 1–5
+                        setVal(Math.min(5, Math.max(1, value)))
                       }
                       const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
                         e.stopPropagation()
@@ -972,8 +967,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         window.addEventListener('pointerup', up, true)
                       }
                       const onKey = (e: React.KeyboardEvent<HTMLDivElement>)=>{
-                        if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); setVal(Math.max(1, (current||1)-1)) }
-                        if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); setVal(Math.min(5, (current||1)+1)) }
+                        if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); setVal(Math.max(1, (current||1)-0.5)) }
+                        if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); setVal(Math.min(5, (current||1)+0.5)) }
                       }
                       return (
                         <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
@@ -981,15 +976,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                           onPointerDown={onDown}
                           onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
                           onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
-                          title={[
-                            'Zelfinschatting van eigen beheersing (1–5).',
-                            'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
-                            `Huidig: ${current||1}/5`
-                          ].join('\n')}
                         >
                           <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
-                          <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
-                          <div className="val">{current||1}</div>
+                          <div className="ticks">{Array.from({length:8}).map((_,i)=>(<span key={i} />))}</div>
+                          {/* geen numerieke weergave */}
                         </div>
                       )
                     })()}
@@ -1033,16 +1023,12 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                     const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                     return (
-                      <div className="self-tile" aria-hidden title={[
-                        'Gemiddelde van je eigen scores over de subcategorieën binnen deze sectie.',
-                        "Gebruik de knop 'reset' om de zelf gescoorde beheersing voor deze categorie te wissen.",
-                        `Gemiddeld: ${avg.toFixed(1)}`
-                      ].join('\n')} style={{ background: colorFor(avg) }}>
+                      <div className="self-tile" aria-hidden style={{ background: colorFor(avg) }}>
                         <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                         <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                           setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
                         }}>reset</button>
-                        <div className="val">{avg.toFixed(1)}</div>
+                        {/* geen numerieke weergave */}
                       </div>
                     )
                   })()
@@ -1145,8 +1131,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const onPointer = (clientX: number, el: HTMLDivElement)=>{
                       const rect = el.getBoundingClientRect()
                       const rel = (clientX - rect.left) / rect.width
-                      const step = Math.min(5, Math.max(1, Math.round(rel*5)))
-                      updateSelfLevel(c.id, step)
+                      const clamped = Math.max(0, Math.min(1, rel))
+                      const value = 1 + Math.round(clamped * 8) / 2 // 0.5 stappen
+                      updateSelfLevel(c.id, Math.min(5, Math.max(1, value)))
                     }
                     const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
                       e.stopPropagation(); const el = e.currentTarget
@@ -1165,8 +1152,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true)
                     }
                     const onKey = (e: React.KeyboardEvent<HTMLDivElement>)=>{
-                      if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); updateSelfLevel(c.id, Math.max(1, (current||1)-1)) }
-                      if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); updateSelfLevel(c.id, Math.min(5, (current||1)+1)) }
+                      if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); updateSelfLevel(c.id, Math.max(1, (current||1)-0.5)) }
+                      if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); updateSelfLevel(c.id, Math.min(5, (current||1)+0.5)) }
                     }
                     return (
                       <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
@@ -1174,15 +1161,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         onPointerDown={onDown}
                         onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
                         onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
-                        title={[
-                          'Zelfinschatting van eigen beheersing (1–5).',
-                          'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
-                          `Huidig: ${current||1}/5`
-                        ].join('\n')}
                       >
                         <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
-                        <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
-                        <div className="val">{current||1}</div>
+                        <div className="ticks">{Array.from({length:8}).map((_,i)=>(<span key={i} />))}</div>
+                        {/* geen numerieke weergave */}
                       </div>
                     )
                   })()}
@@ -1226,16 +1208,12 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                     const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                     return (
-                      <div className="self-tile" aria-hidden title={[
-                        'Gemiddelde van je eigen scores over de subcategorieën binnen deze sectie.',
-                        "Gebruik de knop 'reset' om de zelf gescoorde beheersing voor deze categorie te wissen.",
-                        `Gemiddeld: ${avg.toFixed(1)}`
-                      ].join('\n')} style={{ background: colorFor(avg) }}>
+                      <div className="self-tile" aria-hidden style={{ background: colorFor(avg) }}>
                         <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                         <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                           setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
                         }}>reset</button>
-                        <div className="val">{avg.toFixed(1)}</div>
+                        {/* geen numerieke weergave */}
                       </div>
                     )
                   })()
@@ -1320,8 +1298,9 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const onPointer = (clientX: number, el: HTMLDivElement)=>{
                       const rect = el.getBoundingClientRect()
                       const rel = (clientX - rect.left) / rect.width
-                      const step = Math.min(5, Math.max(1, Math.round(rel*5)))
-                      updateSelfLevel(k.id, step)
+                      const clamped = Math.max(0, Math.min(1, rel))
+                      const value = 1 + Math.round(clamped * 8) / 2 // 0.5 stappen
+                      updateSelfLevel(k.id, Math.min(5, Math.max(1, value)))
                     }
                     const onDown = (e: React.PointerEvent<HTMLDivElement>)=>{
                       e.stopPropagation(); const el = e.currentTarget
@@ -1340,8 +1319,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true)
                     }
                     const onKey = (e: React.KeyboardEvent<HTMLDivElement>)=>{
-                      if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); updateSelfLevel(k.id, Math.max(1, (current||1)-1)) }
-                      if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); updateSelfLevel(k.id, Math.min(5, (current||1)+1)) }
+                      if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); updateSelfLevel(k.id, Math.max(1, (current||1)-0.5)) }
+                      if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); updateSelfLevel(k.id, Math.min(5, (current||1)+0.5)) }
                     }
                     return (
                       <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
@@ -1349,15 +1328,10 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                         onPointerDown={onDown}
                         onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
                         onKeyDown={(e)=>{ e.stopPropagation(); onKey(e) }}
-                        title={[
-                          'Zelfinschatting van eigen beheersing (1–5).',
-                          'Je kunt dit gaandeweg je ontwikkeling bijstellen.',
-                          `Huidig: ${current||1}/5`
-                        ].join('\n')}
                       >
                         <div className="cover" style={{ width: `calc(100% - ${toWidth(current||1)})` }} />
-                        <div className="ticks">{Array.from({length:4}).map((_,i)=>(<span key={i} />))}</div>
-                        <div className="val">{current||1}</div>
+                        <div className="ticks">{Array.from({length:8}).map((_,i)=>(<span key={i} />))}</div>
+                        {/* geen numerieke weergave */}
                       </div>
                     )
                   })()}
@@ -1393,12 +1367,19 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   {(a.perspectives||[]).map(p=> (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
                 </div>
                 <div className="wm-vbars">
-                  <span>Variatie</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.variatie||0)/5*100}%`}} /></div>
-                  <span>Relevantie</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.relevantie||0)/5*100}%`}} /></div>
-                  <span>Authenticiteit</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.authenticiteit||0)/5*100}%`}} /></div>
-                  <span>Actualiteit</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.actualiteit||0)/5*100}%`}} /></div>
-                  <span>Kwantiteit</span><div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.kwantiteit||0)/5*100}%`}} /></div>
+                  <span>Relevantie</span>
+                  <div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.relevantie||0)/5*100}%`}} /></div>
+                  <span>Authenticiteit</span>
+                  <div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.authenticiteit||0)/5*100}%`}} /></div>
                 </div>
+                {(()=>{ const rel=Math.max(0,Math.min(5,Number((a as any)?.vraak?.relevantie||0))); const auth=Math.max(0,Math.min(5,Number((a as any)?.vraak?.authenticiteit||0))); const base=(rel+auth)/10; const ps=Array.isArray((a as any)?.perspectives)?(a as any).perspectives as string[]:[]; const weightFor=(p:string)=>{const k=String(p||'').toLowerCase(); if(k==='zelfreflectie') return 1; if(k==='student-p'||k==='student-hf1') return 1.05; if(k==='student-hf2-3'||k==='patient') return 1.10; if(k==='docent'||k==='stagebegeleider') return 1.20; return 1}; const boost=ps.length?Math.max(...ps.map(weightFor)):1; const score01=Math.max(0,Math.min(1, base*boost)); const sizes=[10,14,18,22,28]; const selIdx=Math.min(sizes.length-1, Math.max(0, Math.round(score01*(sizes.length-1)))); const expl='Bepaald o.b.v. Relevantie en Authenticiteit; licht verhoogd bij sterker feedbackperspectief (zelfreflectie < P/HF1 < HF2/3/patiënt < docent/stagebegeleider).'; return (
+                  <div style={{display:'grid', gridTemplateColumns:'100px 1fr', gap:6, alignItems:'center'}} title={`Omvang van bewijsstuk — ${(score01*100).toFixed(0)}/100\n${expl}`}>
+                    <span>Omvang</span>
+                    <div className="wm-puzzles" aria-label="Omvang van bewijsstuk">
+                      {sizes.map((s,i)=> (<div key={i} className={`piece${i===selIdx?' sel':''}`} style={{width:s, height:s}} />))}
+                    </div>
+                  </div>
+                )})()}
                 <div style={{marginTop:10, display:'grid', gridTemplateColumns:'max-content 1fr', rowGap:6, columnGap:10}}>
                   <span className="muted">Soort</span><span>{a.kind||'—'}</span>
                   {a.evlOutcomeIds?.length ? (<><span className="muted">EVL</span><span>{a.evlOutcomeIds.map(id=> `${id} ${outcomeNameById.get(id)||''}`).join(', ')}</span></>) : null}
@@ -1485,17 +1466,19 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                               '• We kijken per leeruitkomst of je “genoeg” bewijs hebt.',
                               '• Scoor je op V, R, A en A al hoog? Dan zijn 2 sterke bewijzen vaak genoeg.',
                               '• Zijn die scores lager? Dan heb je er meer nodig (richtwaarde loopt op tot ±5).',
-                              '• Je score loopt op met het aantal: 1 = weinig, 5 = verzadigd (n van T).'
+                              '• Je score loopt op met het aantal: 1 = weinig, 5 = verzadigd (n van T).',
+                              '',
+                              'Let op: genoeg bewijs betekent niet automatisch kwaliteit. Deze staaf gaat over kwantiteit/verzadiging – zijn er voldoende puzzelstukjes om de puzzel te leggen? Het zegt nog niets over wat er op de puzzel te zien is (kwaliteit).'
                             ].join('\n')
                           }
-                          return 'Kwantiteit: per leeruitkomst “genoeg” bewijs; sterk → vaak 2 genoeg; zwakker → tot ±5'
+                          return 'Kwantiteit: per leeruitkomst “genoeg” bewijs; sterk → vaak 2 genoeg; zwakker → tot ±5. Let op: genoeg bewijs ≠ kwaliteit – dit zegt alleen iets over kwantiteit/verzadiging.'
                         }
                         return ''
                       })()
                       return (
                       <div key={i} className="bar" style={{height:'100%', width:22}} title={title}>
-                        <div className="fill" style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} />
-                        <div className="lbl">{lbl}</div>
+                        <div className="fill" title={title} style={{ height: toPct(val as number), background: i===0? '#5ba3ff' : i===1? '#8bd17c' : i===2? '#f0a657' : i===3? '#7bd1d9' : '#b58cff' }} />
+                        <div className="lbl" title={title}>{lbl}</div>
                       </div>)
                     })}
                   </>

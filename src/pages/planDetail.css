@@ -27,6 +27,56 @@
 .menu-list .btn{ display:flex; align-items:center; justify-content:flex-start; gap:8px }
 .menu-list{ padding-top:4px }
 
+/* Icon-only actieknoppen binnen lijsten */
+.action-icon{ background: var(--surface2); border:1px solid var(--line-strong); color: var(--text); padding:6px; border-radius:8px; cursor:pointer }
+.action-icon:hover{ background: rgba(255,255,255,.08) }
+.action-row{ display:inline-flex; gap:6px; align-items:center }
+
+/* Mini EVL grid in lijst */
+.mini-evl-grid{ display:grid; align-items:center; column-gap:8px; row-gap:6px }
+.mini-evl-header{ display:grid; gap:4px; align-items:end; margin:4px 0 }
+.mini-evl-colhead{ writing-mode: vertical-rl; transform: rotate(180deg); white-space:nowrap; font-size:10px; text-align:center; color: var(--text); opacity:.9 }
+.mini-evl-colhead{ height: 28px; display:flex; align-items:flex-end; justify-content:center; overflow:hidden }
+.mini-evl-colhead button{ all:unset; cursor:pointer; display:block; width:100%; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:clip }
+.mini-evl-colhead.head button{ font-weight:700; color: var(--text); opacity:1 }
+.mini-evl-colhead.sub button{ color: var(--sub-accent, #f0a657) }
+.mini-evl-colhead.sub{ position:relative }
+.mini-evl-colhead.sub::before{ content:''; position:absolute; bottom:100%; left:0; right:0; height:2px; background: var(--sub-accent, #f0a657); border-radius:2px; opacity:.5 }
+.mini-evl-colhead button:focus{ outline:2px solid var(--primary) }
+.mini-evl-row{ display:grid; gap:4px; align-items:center }
+.mini-evl-cell{ width: var(--mini-evl-colw, 24px); height:16px; border-radius:4px; background: rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center }
+.mini-evl-cell.head{ background: rgba(255,255,255,.10); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15) }
+.mini-evl-cell.head.selected{ box-shadow: inset 0 2px 0 var(--sub-accent, #f0a657), inset 0 0 0 1px rgba(255,255,255,.15) }
+.mini-evl-cell.mark{ background: var(--primary) }
+.mini-evl-cell.submark{ background: var(--sub-accent, #f0a657) }
+.mini-evl-cell.sub{ box-shadow: inset 0 2px 0 var(--sub-accent, #f0a657); width: calc(var(--mini-evl-colw, 24px) * .72); height:12px; margin: 0 auto; border-radius:2px }
+
+/* Subkolom klikbare hint */
+.mini-evl-cell, .mini-evl-colhead button{ cursor: pointer }
+
+/* Niveaukleuren via custom properties */
+.lvl-evl1{ }
+.lvl-evl2{ }
+.lvl-evl3{ }
+.lvl-evl4{ }
+.lvl-evl5{ }
+.lvl-case{ }
+.lvl-know{ }
+
+/* Huidige lesweek highlight in lijst */
+.week-current{ box-shadow: inset 0 0 0 2px rgba(34,197,94,.6); border-radius:8px; padding:6px }
+
+/* Light theme verbeterde contrasten voor minitabel */
+[data-theme-effective='light'] .mini-evl-cell:not(.mark):not(.submark){ background: rgba(14,19,32,.06); box-shadow: inset 0 0 0 1px rgba(14,19,32,.08) }
+[data-theme-effective='light'] .mini-evl-cell.head:not(.mark){ background: rgba(14,19,32,.08) }
+[data-theme-effective='light'] .mini-evl-cell.sub:not(.submark){ box-shadow: inset 0 2px 0 var(--sub-accent, #f0a657), inset 0 0 0 1px rgba(14,19,32,.08) }
+[data-theme-effective='light'] .mini-evl-colhead.sub::before{ opacity:.45 }
+[data-theme-effective='light'] .mini-evl-colhead.head button{ color:#0e1320 }
+[data-theme-effective='light'] .week-current{ box-shadow: inset 0 0 0 2px rgba(34,197,94,.7) }
+
+/* In licht thema: paarse sub-accentkleur voor betere leesbaarheid */
+[data-theme-effective='light']{ --sub-accent: #d946ef }
+
 /* Mobiel: header actiebalk vervangen door hamburger */
 @media (max-width: 900px){
   .actions-desktop{ display:none }
