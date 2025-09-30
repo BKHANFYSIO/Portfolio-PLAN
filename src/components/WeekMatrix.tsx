@@ -1380,7 +1380,14 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                 )})()}
                 <div style={{marginTop:10, display:'grid', gridTemplateColumns:'max-content 1fr', rowGap:8, columnGap:12}}>
                   <span className="muted">Soort</span>
-                  <span>{a.kind||'—'}</span>
+                  <span>
+                    {a.kind ? (
+                      <span className="wm-chip" title={String(a.kind)} style={{display:'inline-flex', alignItems:'center', gap:6}}>
+                        <KindIcon kind={a.kind} />
+                        <span>{String(a.kind)}</span>
+                      </span>
+                    ) : (<span className="muted">—</span>)}
+                  </span>
 
                   <span className="muted">EVL</span>
                   <span>
@@ -1444,8 +1451,27 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   <span className="muted">Perspectieven</span>
                   <span>
                     {Array.isArray(a.perspectives) && a.perspectives.length>0 ? (
-                      <span style={{display:'inline-flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
-                        {a.perspectives.map(p => (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
+                      <span style={{display:'inline-flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
+                        {Array.from(new Set(a.perspectives)).map(p => {
+                          const lbl = (():string=>{
+                            const s = String(p||'')
+                            if(s==='student-hf2-3') return 'Student HF2/3'
+                            if(s==='student-hf1') return 'Student HF1'
+                            if(s==='student-p') return 'Student P'
+                            if(s==='zelfreflectie') return 'Zelfreflectie'
+                            if(s==='stagebegeleider') return 'Stagebegeleider'
+                            if(s==='patient') return 'Patiënt'
+                            if(s==='docent') return 'Docent'
+                            if(s==='overig') return 'Overig'
+                            return s.replace(/-/g,' ')
+                          })()
+                          return (
+                            <span key={p} className="wm-chip" title={lbl} style={{display:'inline-flex', alignItems:'center', gap:6}}>
+                              <PerspectiveIcon p={p as any} />
+                              <span>{lbl}</span>
+                            </span>
+                          )
+                        })}
                       </span>
                     ) : (<span className="muted">—</span>)}
                   </span>
