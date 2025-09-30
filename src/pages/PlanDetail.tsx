@@ -503,9 +503,6 @@ export default function PlanDetail(){
 
     doc.save(`${localName.replace(/\s+/g,'_')}_bewijzen.pdf`)
   }
-  async function exportPdfCurrentView(){
-    await exportPdfMatrixOnly()
-  }
   async function exportPdfHalves(){
     setShowPdfGuide(false)
     const container = document.querySelector('.center') as HTMLElement | null
