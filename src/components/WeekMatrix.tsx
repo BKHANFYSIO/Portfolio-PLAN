@@ -1362,10 +1362,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   <strong style={{flex:1}}>{a.name}</strong>
                   <span className="muted">{formatLesweek(a.week)}</span>
                 </div>
-                <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:8}}>
-                  <span className="sep" />
-                  {(a.perspectives||[]).map(p=> (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
-                </div>
+                {/* iconenrij vervangen door gestructureerde info hieronder */}
+                <div style={{height:4}} />
                 <div className="wm-vbars">
                   <span>Relevantie</span>
                   <div className="wm-vbar"><div className="fill" style={{width:`${(a.vraak?.relevantie||0)/5*100}%`}} /></div>
@@ -1380,11 +1378,51 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     </div>
                   </div>
                 )})()}
-                <div style={{marginTop:10, display:'grid', gridTemplateColumns:'max-content 1fr', rowGap:6, columnGap:10}}>
-                  <span className="muted">Soort</span><span>{a.kind||'—'}</span>
-                  {a.evlOutcomeIds?.length ? (<><span className="muted">EVL</span><span>{a.evlOutcomeIds.map(id=> `${id} ${outcomeNameById.get(id)||''}`).join(', ')}</span></>) : null}
-                  {a.caseIds?.length ? (<><span className="muted">Casus</span><span>{a.caseIds.map(id=> caseNameById.get(id)||id).join(', ')}</span></>) : null}
-                  {a.knowledgeIds?.length ? (<><span className="muted">Kennis</span><span>{a.knowledgeIds.map(id=> knowlNameById.get(id)||id).join(', ')}</span></>) : null}
+                <div style={{marginTop:10, display:'grid', gridTemplateColumns:'max-content 1fr', rowGap:8, columnGap:12}}>
+                  <span className="muted">Soort</span>
+                  <span>{a.kind||'—'}</span>
+
+                  <span className="muted">EVL</span>
+                  <span>
+                    {(a.evlOutcomeIds && a.evlOutcomeIds.length>0) ? (
+                      <span style={{display:'inline-flex', gap:6, flexWrap:'wrap'}}>
+                        {Array.from(new Set(a.evlOutcomeIds)).map(id => (
+                          <span key={id} className="wm-chip" title={`${id} · ${(outcomeNameById.get(id)||'').trim()}`}>{id}</span>
+                        ))}
+                      </span>
+                    ) : (<span className="muted">—</span>)}
+                  </span>
+
+                  <span className="muted">Casus</span>
+                  <span>
+                    {(a.caseIds && a.caseIds.length>0) ? (
+                      <span style={{display:'inline-flex', gap:6, flexWrap:'wrap'}}>
+                        {Array.from(new Set(a.caseIds)).map(id => (
+                          <span key={id} className="wm-chip" title={caseNameById.get(id)||id}>{(caseNameById.get(id)||id)}</span>
+                        ))}
+                      </span>
+                    ) : (<span className="muted">—</span>)}
+                  </span>
+
+                  <span className="muted">Kennis</span>
+                  <span>
+                    {(a.knowledgeIds && a.knowledgeIds.length>0) ? (
+                      <span style={{display:'inline-flex', gap:6, flexWrap:'wrap'}}>
+                        {Array.from(new Set(a.knowledgeIds)).map(id => (
+                          <span key={id} className="wm-chip" title={knowlNameById.get(id)||id}>{(knowlNameById.get(id)||id)}</span>
+                        ))}
+                      </span>
+                    ) : (<span className="muted">—</span>)}
+                  </span>
+
+                  <span className="muted">Perspectieven</span>
+                  <span>
+                    {Array.isArray(a.perspectives) && a.perspectives.length>0 ? (
+                      <span style={{display:'inline-flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+                        {a.perspectives.map(p => (<span key={p} title={p}><PerspectiveIcon p={p as any} /></span>))}
+                      </span>
+                    ) : (<span className="muted">—</span>)}
+                  </span>
                 </div>
                 <div style={{marginTop:12, textAlign:'right'}}>
                   {onEdit && (
