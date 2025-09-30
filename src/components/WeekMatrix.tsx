@@ -497,6 +497,20 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Exporteer een globale helper zodat andere pagina's (PDF-export) exact dezelfde preview‑markup kunnen gebruiken
+  useEffect(()=>{
+    try{
+      ;(window as any)._pf_setPreview = (arts: Artifact[], title: string)=> setPreview({ title, artifacts: arts })
+      ;(window as any)._pf_closePreview = ()=> setPreview(null)
+    }catch{}
+    return ()=>{
+      try{
+        if((window as any)._pf_setPreview) delete (window as any)._pf_setPreview
+        if((window as any)._pf_closePreview) delete (window as any)._pf_closePreview
+      }catch{}
+    }
+  }, [])
+
   // Helpers for names
   const outcomeNameById = useMemo(()=>{
     const m = new Map<string,string>()
@@ -825,7 +839,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                       const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                       return (
-                        <div className="self-tile" aria-hidden style={{ background: colorFor(avg) }}>
+                        <div className="self-tile" aria-hidden title={`Gemiddelde zelfbeheersing voor ${block.id}.\nHoe groener, hoe beter je het beheerst.\nDit is jouw zelfscore op basis van toegevoegd bewijs en ontvangen feedback.\nKlik 'reset' om je inschatting te wissen.`} style={{ background: colorFor(avg) }}>
                           <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                           <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                             setSelfLevels(cur=>{ const next={...cur}; for(const id of outcomeIds) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
@@ -975,6 +989,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                       }
                       return (
                         <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
+                          title={`Jouw zelfbeheersing.\nSchuif de balk naar links of rechts om aan te passen.\nHoe groener, hoe beter je het beheerst.\nDit is jouw zelfscore op basis van toegevoegd bewijs en ontvangen feedback.\nJe kunt klikken of slepen; met pijltjestoetsen wijzig je per halve stap.`}
                           style={{ background: colorFor(current||1) }}
                           onPointerDown={onDown}
                           onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
@@ -1026,7 +1041,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                     const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
                     return (
-                      <div className="self-tile" aria-hidden style={{ background: colorFor(avg) }}>
+                      <div className="self-tile" aria-hidden title={`Gemiddelde zelfbeheersing voor Casussen.\nHoe groener, hoe beter je het beheerst.\nDit is jouw zelfscore op basis van toegevoegd bewijs en ontvangen feedback.\nKlik 'reset' om je inschatting te wissen.`} style={{ background: colorFor(avg) }}>
                         <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                         <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                           setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
@@ -1161,6 +1176,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     }
                     return (
                       <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
+                        title={`Jouw zelfbeheersing.\nSchuif de balk naar links of rechts om aan te passen.\nHoe groener, hoe beter je het beheerst.\nDit is jouw zelfscore op basis van toegevoegd bewijs en ontvangen feedback.\nJe kunt klikken of slepen; met pijltjestoetsen wijzig je per halve stap.`}
                         style={{ background: colorFor(current||1) }}
                         onPointerDown={onDown}
                         onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
@@ -1211,8 +1227,8 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     const vals = ids.map(id => ( selfLevels?.[id] ?? 1 ))
                     const avg = vals.reduce((a:number,b:number)=>a+b,0)/vals.length
                     const pct = Math.max(0, Math.min(5, avg)) / 5 * 100
-                    return (
-                      <div className="self-tile" aria-hidden style={{ background: colorFor(avg) }}>
+                  return (
+                    <div className="self-tile" aria-hidden title={`Gemiddelde zelfbeheersing voor Kennisdomeinen.\nHoe groener, hoe beter je het beheerst.\nDit is jouw zelfscore op basis van toegevoegd bewijs en ontvangen feedback.\nKlik 'reset' om je inschatting te wissen.`} style={{ background: colorFor(avg) }}>
                         <div className="cover" style={{ width: `calc(100% - ${pct}%)` }} />
                         <button className="wm-smallbtn self-reset" onClick={(e)=>{ e.stopPropagation();
                           setSelfLevels(cur=>{ const next={...cur}; for(const id of ids) delete (next as any)[id]; try{ const plans=JSON.parse(localStorage.getItem('pf-portfolio-plans')||'[]'); const idx=plans.findIndex((p:any)=>p.id===plan.id); const curPlan=plans[idx]; const saved={...(curPlan||plan), selfLevels: next}; if(idx>=0){ plans[idx]=saved } else { plans.unshift(saved) } localStorage.setItem('pf-portfolio-plans', JSON.stringify(plans)); (plan as any).selfLevels = next }catch{} return next })
@@ -1329,6 +1345,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                     }
                     return (
                       <div className="self-tile" role="slider" aria-valuemin={1} aria-valuemax={5} aria-valuenow={current||1} tabIndex={0}
+                        title={`Jouw zelfbeheersing.\nSchuif de balk naar links of rechts om aan te passen.\nHoe groener, hoe beter je het beheerst.\nDit is jouw zelfscore op basis van toegevoegd bewijs en ontvangen feedback.\nJe kunt klikken of slepen; met pijltjestoetsen wijzig je per halve stap.`}
                         style={{ background: colorFor(current||1) }}
                         onPointerDown={onDown}
                         onClick={(e)=>{ e.stopPropagation(); onPointer((e as any).clientX, e.currentTarget) }}
@@ -1478,6 +1495,12 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                           )
                         })}
                       </span>
+                    ) : (<span className="muted">—</span>)}
+                  </span>
+                  <span className="muted">Toelichting</span>
+                  <span>
+                    {String((a as any)?.note||'').trim() ? (
+                      <div style={{whiteSpace:'pre-wrap'}}>{String((a as any).note)}</div>
                     ) : (<span className="muted">—</span>)}
                   </span>
                 </div>

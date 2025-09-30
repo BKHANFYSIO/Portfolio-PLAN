@@ -27,6 +27,8 @@ export type Artifact = {
   knowledgeIds: string[];
   vraak: VraakScore;
   perspectives?: PerspectiveKey[];
+  // Vrij tekstveld voor extra context/aanpak
+  note?: string;
   createdAt: number;
   updatedAt: number;
   kind?: 'document'|'toets'|'performance'|'certificaat'|'overig';

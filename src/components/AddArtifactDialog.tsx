@@ -36,6 +36,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
   const [kind, setKind] = useState<string>('')
   const [occAge, setOccAge] = useState<EvidenceAgeBracket|''>('')
   const [persp, setPersp] = useState<PerspectiveKey[]>([])
+  const [note, setNote] = useState('')
   function applyTemplateByName(name: string){
     const t = templates.find(x=> x.name===name)
     if(!t) return
@@ -113,6 +114,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
       id: generateId('art'), name: name.trim(), week: Number(week), evlOutcomeIds, caseIds, knowledgeIds, vraak,
       kind: kind as any,
       perspectives: persp,
+      note: note.trim() || undefined,
       occurrenceAge: occAge || undefined,
       createdAt: Date.now(), updatedAt: Date.now()
     }
@@ -335,6 +337,12 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
             <div className="muted">Naam: {name || '—'} · Week: {week || '—'}</div>
             <div className="muted">LUK: {evlOutcomeIds.join(', ') || '—'}</div>
             <div className="muted">Casus: {caseIds.length||'—'} · Kennis: {knowledgeIds.length||'—'}</div>
+          <div style={{marginTop:8}}>
+            <label style={{display:'block'}}>
+              <span>Extra toelichting (optioneel)</span>
+              <textarea value={note} onChange={e=> setNote(e.target.value)} placeholder="Context, aanpak, bijzonderheden…" rows={4} />
+            </label>
+          </div>
           </div>
         )}
 
@@ -457,6 +465,10 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     </label>
                   ))}
                 </div>
+              </label>
+              <label style={{gridColumn:'1 / -1'}}>
+                <span>Extra toelichting (optioneel)</span>
+                <textarea value={note} onChange={e=> setNote(e.target.value)} placeholder="Context, aanpak, bijzonderheden…" rows={4} />
               </label>
             </div>
             <fieldset>
