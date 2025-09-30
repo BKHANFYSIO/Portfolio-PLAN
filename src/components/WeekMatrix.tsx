@@ -67,7 +67,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
 
   // const rows = useMemo(()=> evlForCourse.flatMap(b => b.outcomes.map(o => ({ evlId: b.id, lukId: o.id, name: o.name }))), [evlForCourse])
   const [openCasus, setOpenCasus] = useState<boolean>(true)
-  const [openKennis, setOpenKennis] = useState<boolean>(false)
+  const [openKennis, setOpenKennis] = useState<boolean>(true)
 
   const [open, setOpen] = useState<Record<string, boolean>>(()=>Object.fromEntries(evlForCourse.map(b=>[b.id,true])))
   function toggleBlock(id: string){ setOpen(s=> ({...s, [id]: !s[id]})) }
@@ -1385,11 +1385,37 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   <span className="muted">EVL</span>
                   <span>
                     {(a.evlOutcomeIds && a.evlOutcomeIds.length>0) ? (
-                      <span style={{display:'inline-flex', gap:6, flexWrap:'wrap'}}>
-                        {Array.from(new Set(a.evlOutcomeIds)).map(id => (
-                          <span key={id} className="wm-chip" title={`${id} · ${(outcomeNameById.get(id)||'').trim()}`}>{id}</span>
-                        ))}
-                      </span>
+                      (()=>{
+                        const uniqueIds = Array.from(new Set(a.evlOutcomeIds))
+                        const groups = new Map<string, string[]>()
+                        for(const id of uniqueIds){
+                          const m = String(id).match(/^(\d+)/)
+                          const head = m ? `EVL${m[1]}` : 'EVL?'
+                          const arr = groups.get(head) || []
+                          arr.push(id)
+                          groups.set(head, arr)
+                        }
+                        // Sorteer subcodes binnen groep (1.2 < 1.10)
+                        const sortSub = (ids:string[])=> ids.sort((a,b)=>{
+                          const pa = a.split('.')
+                          const pb = b.split('.')
+                          const na = Number(pa[1]||0)
+                          const nb = Number(pb[1]||0)
+                          return na - nb
+                        })
+                        return (
+                          <span style={{display:'grid', gap:4}}>
+                            {Array.from(groups.entries()).sort((a,b)=> a[0].localeCompare(b[0])).map(([head, ids])=> (
+                              <span key={head} style={{display:'inline-flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
+                                <span className="wm-chip" title={head}>{head}</span>
+                                {sortSub(ids).map(id => (
+                                  <span key={id} className="wm-chip" title={`${id} · ${(outcomeNameById.get(id)||'').trim()}`}>{id}</span>
+                                ))}
+                              </span>
+                            ))}
+                          </span>
+                        )
+                      })()
                     ) : (<span className="muted">—</span>)}
                   </span>
 
