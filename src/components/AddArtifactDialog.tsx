@@ -135,7 +135,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
           <h3 style={{margin:0}}>Bewijsstuk toevoegen</h3>
           <button className="wm-smallbtn" onClick={onClose}>Sluiten</button>
         </div>
-        <div style={{display:'flex', gap:8, marginBottom:8}} className="toggle-group">
+        <div style={{display:'flex', gap:8, marginTop:10, marginBottom:8}} className="toggle-group">
           <button
             className={`file-label toggle${mode==='wizard' ? ' active' : ''}`}
             aria-pressed={mode==='wizard'}

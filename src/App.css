@@ -35,7 +35,7 @@ button{ background:var(--primary); border:none; color:white; padding:8px 12px; b
 .icon{ width:14px; height:14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display:inline-block }
 
 .dialog-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000 }
-.dialog{ background:var(--surface); border:1px solid rgba(255,255,255,.1); border-radius:12px; width:min(720px,92vw); max-height:92vh; overflow:auto; padding:16px; z-index:1001 }
+.dialog{ background:var(--surface); border:1px solid rgba(255,255,255,.1); border-radius:12px; width:min(720px,92vw); max-height:92vh; overflow:auto; padding:0 16px 16px 16px; z-index:1001 }
 .grid{ display:grid; grid-template-columns:1.2fr .5fr 1fr; gap:12px }
 .grid label{ display:flex; flex-direction:column; gap:6px }
 .grid span{ color:var(--muted); font-size:12px }

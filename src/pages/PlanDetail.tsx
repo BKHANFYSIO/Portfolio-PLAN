@@ -401,14 +401,84 @@ export default function PlanDetail(){
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
-    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-    const img = canvas.toDataURL('image/png')
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-    const w = canvas.width * ratio
-    const h = canvas.height * ratio
-    const x = (pageW - w)/2, y = (pageH - h)/2
-    doc.addImage(img, 'PNG', x, y, w, h)
-    doc.save(`${localName.replace(/\s+/g,'_')}_matrix.pdf`)
+
+    // Maak een offscreen clone zodat we de volledige scrollbare inhoud kunnen renderen
+    const host = document.createElement('div')
+    host.style.position = 'fixed'
+    host.style.left = '-10000px'
+    host.style.top = '0'
+    host.style.width = `${container.clientWidth}px`
+    document.body.appendChild(host)
+    try{
+      const clone = container.cloneNode(true) as HTMLElement
+      // Zorg dat de matrix alle rijen toont (geen scroll clipping)
+      const wrap = clone.querySelector('.wm-wrap') as HTMLElement | null
+      if(wrap){
+        wrap.style.height = 'auto'
+        wrap.style.maxHeight = 'none'
+        wrap.style.overflow = 'visible'
+      }
+      // Deactiveer sticky positionering in export om correcte paginabreek-berekening te garanderen
+      const antiSticky = document.createElement('style')
+      antiSticky.textContent = `
+        .wm-header, .wm-corner, .wm-rowhead, .sticky-right, .sticky-bottom { position: static !important; box-shadow: none !important; }
+        .wm-hscroll, .wm-mask-left { display: none !important; }
+      `
+      clone.appendChild(antiSticky)
+      // Plaats clone in host
+      host.appendChild(clone)
+      await new Promise(r=> setTimeout(r, 50))
+
+      // Bepaal mogelijke pagina-breekpunten op rijgrenzen in de clone (in CSS px)
+      const breakYsCss: number[] = []
+      const baseTop = clone.getBoundingClientRect().top
+      clone.querySelectorAll('.wm-rowhead, .wm-evlhead').forEach(el=>{
+        const rect = (el as HTMLElement).getBoundingClientRect()
+        const y = Math.max(0, Math.round(rect.top - baseTop))
+        if(!breakYsCss.includes(y)) breakYsCss.push(y)
+      })
+      // Voeg ook de ondergrens toe
+      const totalHeightCss = clone.scrollHeight
+      if(!breakYsCss.includes(totalHeightCss)) breakYsCss.push(totalHeightCss)
+      breakYsCss.sort((a,b)=> a-b)
+
+      // Render volledige clone naar canvas met hoge resolutie
+      const big = await html2canvas(clone, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
+
+      // Converteer CSS px breekpunten naar canvas px
+      const scaleY = big.height / totalHeightCss
+      const breakYs = breakYsCss.map(v => Math.max(0, Math.round(v * scaleY)))
+
+      // Bereken slice-hoogte in canvaspixels die op één PDF-pagina past
+      const ratio = pageW / big.width
+      const maxSlice = Math.floor(pageH / ratio)
+
+      let yPix = 0
+      let first = true
+      while(yPix < big.height){
+        // Zoek beste breekpunt <= yPix+maxSlice, voorkom 0-hoogte pagina's
+        const limit = Math.min(big.height, yPix + maxSlice)
+        const within = breakYs.filter(y=> y>yPix && y<=limit)
+        let next = within.length ? within[within.length-1] : (breakYs.find(y=> y>limit) ?? big.height)
+        if(next <= yPix){ next = Math.min(big.height, yPix + maxSlice) }
+        const sliceH = Math.max(1, next - yPix)
+        const slice = document.createElement('canvas')
+        slice.width = big.width
+        slice.height = sliceH
+        const ctx = slice.getContext('2d')!
+        ctx.drawImage(big, 0, yPix, big.width, sliceH, 0, 0, big.width, sliceH)
+        const img = slice.toDataURL('image/png')
+        if(!first){ doc.addPage('a4','landscape') }
+        const hPt = sliceH * ratio
+        doc.addImage(img, 'PNG', 0, 0, pageW, hPt)
+        first = false
+        yPix = next
+      }
+
+      doc.save(`${localName.replace(/\s+/g,'_')}_matrix.pdf`)
+    }finally{
+      document.body.removeChild(host)
+    }
   }
   async function exportPdfAllArtifacts(){
     setShowPdfGuide(false)
@@ -449,6 +519,46 @@ export default function PlanDetail(){
       clone.style.overflow = 'visible'
       const body = clone.querySelector('.modal-body') as HTMLElement | null
       if(body){ body.style.overflow = 'visible'; body.style.maxHeight = 'none'; body.style.height = 'auto' }
+      // Vergroot mini EVL kolombreedte in export zodat labels als EVL1 volledig passen
+      clone.querySelectorAll('.mini-evl-grid').forEach(el=>{
+        (el as HTMLElement).style.setProperty('--mini-evl-colw','30px')
+      })
+      // PDF-fix: vervang verticale koppen door canvas-afbeeldingen voor betrouwbare rendering
+      try{
+        const heads = Array.from(clone.querySelectorAll('.mini-evl-colhead button')) as HTMLElement[]
+        for(const btn of heads){
+          const label = (btn.textContent||'').trim()
+          if(!label) continue
+          const canvas = document.createElement('canvas')
+          // vaste maat die past binnen kolombreedte; hoogte geeft visuele marge
+          const colW = 30
+          const headH = 46
+          canvas.width = colW
+          canvas.height = headH
+          const ctx = canvas.getContext('2d')!
+          // achtergrond transparant, tekstkleur uit CSS variabele — fallback naar #e8ecf6
+          const cssColor = getComputedStyle(document.documentElement).getPropertyValue('--text') || '#e8ecf6'
+          ctx.fillStyle = cssColor
+          // centreer en roteer 90° tegen de klok in
+          ctx.translate(colW/2, headH/2)
+          ctx.rotate(-Math.PI/2)
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.font = '700 11px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial'
+          ctx.fillText(label, 0, 0)
+          const img = document.createElement('img')
+          img.src = canvas.toDataURL('image/png')
+          img.style.display = 'block'
+          img.style.margin = '0 auto'
+          // vervang knop door afbeelding
+          btn.replaceWith(img)
+        }
+        const styleFix = document.createElement('style')
+        styleFix.textContent = `
+          .mini-evl-colhead{ height: 46px !important; overflow: visible !important; display:flex; align-items:flex-end; justify-content:center; }
+        `
+        clone.appendChild(styleFix)
+      }catch{}
       // Plaats clone offscreen voor capture
       const host = document.createElement('div')
       host.style.position = 'fixed'
@@ -503,71 +613,6 @@ export default function PlanDetail(){
 
     doc.save(`${localName.replace(/\s+/g,'_')}_bewijzen.pdf`)
   }
-  async function exportPdfHalves(){
-    setShowPdfGuide(false)
-    const container = document.querySelector('.center') as HTMLElement | null
-    const wrap = document.querySelector('.wm-wrap') as HTMLElement | null
-    if(!container || !wrap){ await exportPdf(); return }
-    const prev = wrap.scrollLeft
-    const max = Math.max(0, (wrap.scrollWidth - wrap.clientWidth))
-    const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-    const pageW = doc.internal.pageSize.getWidth()
-    const pageH = doc.internal.pageSize.getHeight()
-    const capture = async ()=>{
-      const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-      const img = canvas.toDataURL('image/png')
-      const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-      const w = canvas.width * ratio; const h = canvas.height * ratio
-      const x = (pageW - w)/2, y = (pageH - h)/2
-      doc.addImage(img, 'PNG', x, y, w, h)
-    }
-    // Eerste helft (links)
-    wrap.scrollLeft = 0; await new Promise(r=> setTimeout(r, 200)); await capture()
-    // Tweede helft (rechts), alleen als er iets te scrollen is
-    if(max > 0){ doc.addPage('a4','landscape'); wrap.scrollLeft = max; await new Promise(r=> setTimeout(r, 200)); await capture() }
-    // Detailpagina's daarna – meerdere per pagina (landscape) (chronologisch op week)
-    let yL = Number.POSITIVE_INFINITY
-    const marginL = 24
-    const sortedHalves = [...(plan.artifacts||[] as any[])].sort((a:any,b:any)=> (a.week||0) - (b.week||0))
-    for(const a of sortedHalves){
-      const pageW = doc.internal.pageSize.getWidth()
-      const pageH = doc.internal.pageSize.getHeight()
-      if(yL===Number.POSITIVE_INFINITY){ yL = marginL; doc.addPage('a4','landscape') }
-      const wrapEl = document.createElement('div')
-      wrapEl.style.width = '1000px'
-      wrapEl.style.padding = '16px'
-      wrapEl.style.background = getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff'
-      wrapEl.innerHTML = `
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px">${a.name}</div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;color:#9aa6c6">${formatLesweek(a.week)} · Soort: ${a.kind||'—'}</div>
-        <div style="display:grid;grid-template-columns:180px 1fr;gap:8px;margin-bottom:10px">
-          <div>EVL</div><div>${(a.evlOutcomeIds||[]).join(', ')||'—'}</div>
-          <div>Casus</div><div>${(a.caseIds||[]).join(', ')||'—'}</div>
-          <div>Kennis</div><div>${(a.knowledgeIds||[]).join(', ')||'—'}</div>
-        </div>
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:6px">
-          <div>Variatie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.variatie||0)/5*100}%"></div></div></div>
-          <div>Relevantie</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.relevantie||0)/5*100}%"></div></div></div>
-          <div>Authenticiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.authenticiteit||0)/5*100}%"></div></div></div>
-          <div>Actualiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.actualiteit||0)/5*100}%"></div></div></div>
-          <div>Kwantiteit</div><div><div style="height:8px;background:rgba(255,255,255,.08)"><div style="height:8px;background:#4f7cff;width:${(a.vraak?.kwantiteit||0)/5*100}%"></div></div></div>
-        </div>`
-      document.body.appendChild(wrapEl)
-      const c2 = await html2canvas(wrapEl, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-      const img2 = c2.toDataURL('image/png')
-      const maxW = pageW - marginL*2
-      const scale = Math.min(1, maxW / c2.width)
-      const w2 = c2.width * scale
-      const h2 = c2.height * scale
-      if(yL + h2 > pageH - marginL){ doc.addPage('a4','landscape'); yL = marginL }
-      const x2 = marginL
-      doc.addImage(img2, 'PNG', x2, yL, w2, h2)
-      yL += h2 + 12
-      document.body.removeChild(wrapEl)
-    }
-    wrap.scrollLeft = prev
-    doc.save(`${localName.replace(/\s+/g,'_')}_portfolio_halves.pdf`)
-  }
 
   return (
     <div className="detail">
@@ -579,6 +624,7 @@ export default function PlanDetail(){
         <div className="actions">
           <button className="icon-btn primary actions-mobile" onClick={()=> setShowMobileMenu(true)} aria-label="Menu">
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <span style={{marginLeft:6}}>Menu</span>
           </button>
           <div className="actions-desktop">
           <Link className="btn" to="/">
@@ -682,14 +728,27 @@ export default function PlanDetail(){
               Je kunt PDF’s genereren voor jezelf of voor je portfolio. Handig bij de start
               (bijv. EVL4), voor een tussenevaluatie of als bijlage bij je eindreflectie.
             </div>
-            <ul className="muted" style={{fontSize:12, margin:'0 0 12px 18px'}}>
-              <li>Voor de matrix: zoom zo dat alle lesweken zichtbaar zijn.</li>
-              <li>Is de tekst te klein? Kies eventueel “Matrix in twee helften”.</li>
-            </ul>
-            <div className="dialog-actions" style={{display:'flex', gap:8, flexWrap:'wrap'}}>
-              <button className="file-label" onClick={exportPdfAllArtifacts}>PDF — Alle bewijsstukken</button>
-              <button className="btn" onClick={exportPdfMatrixOnly}>PDF — Matrix (huidige weergave)</button>
-              <button className="btn" onClick={exportPdfHalves} title="Gebruik als de matrix anders te klein wordt">Matrix in twee helften (optioneel)</button>
+            <div style={{display:'grid', gap:12, gridTemplateColumns:'1fr 1fr'}}>
+              <div style={{display:'grid', gap:8}}>
+                <div style={{fontWeight:600}}>PDF — Alle bewijsstukken</div>
+                <div className="muted" style={{fontSize:12, lineHeight:1.5}}>
+                  Je krijgt uitgebreide informatie per bewijsstuk: eerst een overzicht per week,
+                  daarna een kaart per bewijsstuk in chronologische volgorde.
+                </div>
+                <div>
+                  <button className="btn" onClick={exportPdfAllArtifacts}>PDF — Alle bewijsstukken</button>
+                </div>
+              </div>
+              <div style={{display:'grid', gap:8}}>
+                <div style={{fontWeight:600}}>PDF — Matrix (huidige weergave)</div>
+                <ul className="muted" style={{fontSize:12, margin:'0 0 0 18px'}}>
+                  <li>Zoom zo dat alle lesweken zichtbaar zijn.</li>
+                  <li>Past het aantal weken niet of is de tekst te klein? Maak twee exports: zoom eerst in op de eerste helft en exporteer; zoom daarna op de tweede helft en exporteer opnieuw.</li>
+                </ul>
+                <div>
+                  <button className="btn" onClick={exportPdfMatrixOnly}>PDF — Matrix (huidige weergave)</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1110,14 +1169,27 @@ export default function PlanDetail(){
               Je kunt PDF’s genereren voor jezelf of voor je portfolio. Handig bij de start
               (bijv. EVL4), voor een tussenevaluatie of als bijlage bij je eindreflectie.
             </div>
-            <ul className="muted" style={{fontSize:12, margin:'0 0 12px 18px'}}>
-              <li>Voor de matrix: zoom zo dat alle lesweken zichtbaar zijn.</li>
-              <li>Is de tekst te klein? Kies eventueel “Matrix in twee helften”.</li>
-            </ul>
-            <div className="dialog-actions" style={{display:'flex', gap:8, flexWrap:'wrap'}}>
-              <button className="file-label" onClick={exportPdfAllArtifacts}>PDF — Alle bewijsstukken</button>
-              <button className="btn" onClick={exportPdfMatrixOnly}>PDF — Matrix (huidige weergave)</button>
-              <button className="btn" onClick={exportPdfHalves} title="Gebruik als de matrix anders te klein wordt">Matrix in twee helften (optioneel)</button>
+            <div style={{display:'grid', gap:12, gridTemplateColumns:'1fr 1fr'}}>
+              <div style={{display:'grid', gap:8}}>
+                <div style={{fontWeight:600}}>PDF — Alle bewijsstukken</div>
+                <div className="muted" style={{fontSize:12, lineHeight:1.5}}>
+                  Je krijgt uitgebreide informatie per bewijsstuk: eerst een overzicht per week,
+                  daarna een kaart per bewijsstuk in chronologische volgorde.
+                </div>
+                <div>
+                  <button className="btn" onClick={exportPdfAllArtifacts}>PDF — Alle bewijsstukken</button>
+                </div>
+              </div>
+              <div style={{display:'grid', gap:8}}>
+                <div style={{fontWeight:600}}>PDF — Matrix (huidige weergave)</div>
+                <ul className="muted" style={{fontSize:12, margin:'0 0 0 18px'}}>
+                  <li>Zoom zo dat alle lesweken zichtbaar zijn.</li>
+                  <li>Past het aantal weken niet of is de tekst te klein? Maak twee exports: zoom eerst in op de eerste helft en exporteer; zoom daarna op de tweede helft en exporteer opnieuw.</li>
+                </ul>
+                <div>
+                  <button className="btn" onClick={exportPdfMatrixOnly}>PDF — Matrix (huidige weergave)</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
