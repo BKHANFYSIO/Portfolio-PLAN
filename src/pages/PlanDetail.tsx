@@ -742,8 +742,8 @@ export default function PlanDetail(){
               <div style={{display:'grid', gap:8}}>
                 <div style={{fontWeight:600}}>PDF — Matrix (huidige weergave)</div>
                 <ul className="muted" style={{fontSize:12, margin:'0 0 0 18px'}}>
-                  <li>Zoom zo dat alle lesweken zichtbaar zijn.</li>
-                  <li>Past het aantal weken niet of is de tekst te klein? Maak twee exports: zoom eerst in op de eerste helft en exporteer; zoom daarna op de tweede helft en exporteer opnieuw.</li>
+                  <li><strong>Belangrijk:</strong> zoom zo dat alle lesweken van dit portfolio‑plan zichtbaar zijn en maak daarna pas de export.</li>
+                  <li>Zoomen kan met <kbd>Ctrl</kbd> + muiswiel of via de zoom‑instellingen van je browser.</li>
                 </ul>
                 <div>
                   <button className="btn" onClick={exportPdfMatrixOnly}>PDF — Matrix (huidige weergave)</button>
@@ -1183,8 +1183,8 @@ export default function PlanDetail(){
               <div style={{display:'grid', gap:8}}>
                 <div style={{fontWeight:600}}>PDF — Matrix (huidige weergave)</div>
                 <ul className="muted" style={{fontSize:12, margin:'0 0 0 18px'}}>
-                  <li>Zoom zo dat alle lesweken zichtbaar zijn.</li>
-                  <li>Past het aantal weken niet of is de tekst te klein? Maak twee exports: zoom eerst in op de eerste helft en exporteer; zoom daarna op de tweede helft en exporteer opnieuw.</li>
+                  <li><strong>Belangrijk:</strong> zoom zo dat alle lesweken van dit portfolio‑plan zichtbaar zijn en maak daarna pas de export.</li>
+                  <li>Zoomen kan met <kbd>Ctrl</kbd> + muiswiel of via de zoom‑instellingen van je browser.</li>
                 </ul>
                 <div>
                   <button className="btn" onClick={exportPdfMatrixOnly}>PDF — Matrix (huidige weergave)</button>
