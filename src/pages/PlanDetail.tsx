@@ -349,46 +349,7 @@ export default function PlanDetail(){
     setShowEdit(false)
   }
 
-  async function exportPdf(){
-    const container = document.querySelector('.center') as HTMLElement | null
-    if(!container) return
-    const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
-    const canvas = await html2canvas(container, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-    const img = canvas.toDataURL('image/png')
-    const pageW = doc.internal.pageSize.getWidth()
-    const pageH = doc.internal.pageSize.getHeight()
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height)
-    const w = canvas.width * ratio
-    const h = canvas.height * ratio
-    const x = (pageW - w)/2, y = (pageH - h)/2
-    doc.addImage(img, 'PNG', x, y, w, h)
-    for(const a of (plan.artifacts||[])){
-      doc.addPage('a4','landscape')
-      const host = document.createElement('div')
-      host.style.position = 'fixed'; host.style.left = '-10000px'; host.style.top = '0'; host.style.width = '1000px'
-      document.body.appendChild(host)
-      try{
-        ;(window as any)._pf_setPreview?.([a], a.name)
-        await new Promise(r=> setTimeout(r, 50))
-        const preview = document.querySelector('.wm-preview') as HTMLElement | null
-        if(preview){
-          const clone = preview.cloneNode(true) as HTMLElement
-          clone.style.position = 'static'; clone.style.maxHeight = 'none'; clone.style.height = 'auto'; clone.style.overflow = 'visible'
-          host.appendChild(clone)
-          const c2 = await html2canvas(clone, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') || '#ffffff', scale:2 })
-          const img2 = c2.toDataURL('image/png')
-          const r2 = Math.min(pageW / c2.width, pageH / c2.height)
-          const w2 = c2.width * r2, h2 = c2.height * r2
-          const x2 = (pageW - w2)/2, y2 = (pageH - h2)/2
-          doc.addImage(img2, 'PNG', x2, y2, w2, h2)
-        }
-      }finally{
-        ;(window as any)._pf_closePreview?.()
-        document.body.removeChild(host)
-      }
-    }
-    doc.save(`${localName.replace(/\s+/g,'_')}_portfolio.pdf`)
-  }
+  
 
   // Verwijderd auto-open via query; popup verschijnt alleen via knop
 
