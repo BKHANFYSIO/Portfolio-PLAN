@@ -162,27 +162,27 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
           <button className="wm-smallbtn" onClick={confirmClose}>Sluiten</button>
         </div>
         {step===0 && (
-          <div style={{display:'flex', gap:8, marginTop:10, marginBottom:8}} className="toggle-group">
-            <button
-              className={`file-label toggle${mode==='wizard' ? ' active' : ''}`}
-              aria-pressed={mode==='wizard'}
-              onClick={()=>{ setMode('wizard'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','wizard') }}
-            >Stappen</button>
-            <button
-              className={`file-label toggle${mode==='full' ? ' active' : ''}`}
-              aria-pressed={mode==='full'}
-              onClick={()=>{ setMode('full'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','full') }}
-            >Formulier</button>
-          </div>
+        <div style={{display:'flex', gap:8, marginTop:10, marginBottom:8}} className="toggle-group">
+          <button
+            className={`file-label toggle${mode==='wizard' ? ' active' : ''}`}
+            aria-pressed={mode==='wizard'}
+            onClick={()=>{ setMode('wizard'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','wizard') }}
+          >Stappen</button>
+          <button
+            className={`file-label toggle${mode==='full' ? ' active' : ''}`}
+            aria-pressed={mode==='full'}
+            onClick={()=>{ setMode('full'); setStep(0); setStartChoice(''); setChosenTemplate(''); localStorage.setItem('pf-add-mode','full') }}
+          >Formulier</button>
+        </div>
         )}
         {step===0 && (
-          <div className="muted" style={{marginTop:-4, marginBottom:8, fontSize:12}}>
-            {mode==='wizard' ? (
+        <div className="muted" style={{marginTop:-4, marginBottom:8, fontSize:12}}>
+          {mode==='wizard' ? (
               <>Je doorloopt duidelijke stappen met uitleg, voorbeelden en een korte checklist. Zo bouw je doelgericht een sterk bewijsstuk. Alles blijft later aanpasbaar.</>
-            ) : (
-              <>Vul alle velden in één overzichtelijk formulier in. Snel als je precies weet wat je wilt toevoegen.</>
-            )}
-          </div>
+          ) : (
+            <>Vul alle velden in één overzichtelijk formulier in. Snel als je precies weet wat je wilt toevoegen.</>
+          )}
+        </div>
         )}
         {mode==='wizard' && <div className="muted" style={{marginBottom:8}}>Stap {step+1} van {TOTAL_STEPS}</div>}
         {mode==='wizard' && step===1 && (
@@ -208,7 +208,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 Het sjabloon vult een aantal velden alvast in. Je kunt alles later nog aanpassen. Let op: niet alle (verplichte) velden zijn vooraf ingevuld.
               </div>
               {startChoice==='template' && (
-                  <div style={{paddingLeft:22}}>
+                <div style={{paddingLeft:22}}>
                   <label style={{display:'block'}}>
                     <span className="muted" style={{display:'block',fontSize:12,marginBottom:4}}>Kies sjabloon</span>
                     <select value={chosenTemplate} onChange={e=> setChosenTemplate(e.target.value)}>
@@ -240,15 +240,15 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
               <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
                 <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free') }} /> Vrije invoer
               </label>
-              <div className="muted" style={{fontSize:12, paddingLeft:22}}>
+                <div className="muted" style={{fontSize:12, paddingLeft:22}}>
                 Je bepaalt zelf alle velden: naam, soort bewijs, leeruitkomsten en VRAAK‑criteria. Kies dit als je iets wilt toevoegen dat niet in een sjabloon past.
-              </div>
+                </div>
             </div>
           </div>
         )}
 
         {mode==='wizard' && step===1 && (
-            <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
+          <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
             {/* Inline uitleg onder actieve velden */}
             <label><span>Naam (verplicht)</span>
               <div style={{display:'flex', alignItems:'center', gap:6}}>
@@ -400,7 +400,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
         )}
 
         {mode==='wizard' && step===4 && (
-            <div style={{display:'grid', gap:12}}>
+          <div style={{display:'grid', gap:12}}>
             <div>
               <div style={{fontWeight:600, marginBottom:4}}>Variatie</div>
               <div className="muted" style={{fontSize:12}}>
@@ -416,16 +416,16 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                   <GuidanceFloat entryKey="step:rel" anchorEl={document.activeElement as HTMLElement} containerEl={document.querySelector('.dialog') as HTMLElement} fixedTop={112} onRequestClose={()=> setFocusKey(null)} />
                 )}
                 <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
-                  <div>
-                    <div style={{fontWeight:600}}>Relevantie</div>
+              <div>
+                <div style={{fontWeight:600}}>Relevantie</div>
                     <div className="muted" style={{fontSize:12}}>Klik om een waarde te kiezen. Nog geen keuze = grijze balk.</div>
                   </div>
                   <input aria-label="Relevantie" type="range" min={0} max={5} value={vraak.relevantie} onChange={e=>setVraak({ ...vraak, relevantie: Number(e.target.value) })} onFocus={()=> setFocusKey('step:rel')} />
                 </div>
-              </div>
+            </div>
             <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
               <div>
-                  <div style={{fontWeight:600}}>Authenticiteit</div>
+                <div style={{fontWeight:600}}>Authenticiteit</div>
                   <div className="muted" style={{fontSize:12}}>Klik om een waarde te kiezen. Uitleg: volgt later.</div>
               </div>
                 <input aria-label="Authenticiteit" type="range" min={0} max={5} value={vraak.authenticiteit} onChange={e=>setVraak({ ...vraak, authenticiteit: Number(e.target.value) })} onFocus={()=> setFocusKey('step:auth')} />
@@ -506,7 +506,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     ;(window as any)._pf_closePreview?.()
                   }, 80)
                 }} />
-            </div>
+          </div>
           </div>
         )}
 
@@ -516,7 +516,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
             {step>0 && <button onClick={()=>setStep(step-1)}>Terug</button>}
             {step<(TOTAL_STEPS-1) ? (
               <div style={{display:'flex', alignItems:'center', gap:10}}>
-                <button
+              <button
                   title={
                     (step===0 && (startChoice==='' || (startChoice==='template' && !chosenTemplate))) ? 'Kies eerst: Sjabloon gebruiken of Vrije invoer.' :
                     (step===1 && (!name.trim() || !week || !kind || (!noPersp && persp.length===0))) ? "Vul eerst alle verplichte velden in: naam, week, soort en perspectieven (of kies 'geen perspectieven')." :
@@ -541,7 +541,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     (step===1 && (!name.trim() || !week || !kind || (!noPersp && persp.length===0))) ||
                     (step===4 && (vraak.relevantie===0 || vraak.authenticiteit===0))
                   }
-                >Volgende</button>
+              >Volgende</button>
               </div>
             ) : (
               <button onClick={save}>Opslaan</button>
@@ -594,9 +594,9 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     <label style={{display:'inline-flex',gap:8,alignItems:'center'}}>
                       <input type="radio" checked={startChoice==='free'} onChange={()=>{ setStartChoice('free') }} /> Vrije invoer
                     </label>
-                    <div className="muted" style={{fontSize:12, paddingLeft:22}}>
+                      <div className="muted" style={{fontSize:12, paddingLeft:22}}>
                       Je bepaalt zelf alle velden: naam, soort bewijs, leeruitkomsten en VRAAK‑criteria. Kies dit als je iets wilt toevoegen dat niet in een sjabloon past.
-                    </div>
+                      </div>
                   </div>
                 </div>
                 <div className="dialog-actions">
@@ -619,13 +619,13 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
               )}
               <label><span>Week (verplicht)</span>
                 <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
-                  <select value={week} onChange={e=>setWeek(Number(e.target.value) as any)}>
+                <select value={week} onChange={e=>setWeek(Number(e.target.value) as any)}>
                     <option value="">Kies week…</option>
-                    {yearWeeks.filter(w=> visibleWeeks.includes(w.week)).map(w => {
-                      const label = `${w.code||w.label}${w.startISO ? ' — '+w.startISO : ''}`
-                      return <option key={w.week} value={w.week}>{label}</option>
-                    })}
-                  </select>
+                  {yearWeeks.filter(w=> visibleWeeks.includes(w.week)).map(w => {
+                    const label = `${w.code||w.label}${w.startISO ? ' — '+w.startISO : ''}`
+                    return <option key={w.week} value={w.week}>{label}</option>
+                  })}
+                </select>
                   <InfoTip content="Spreid bewijs over de tijd; week kun je later aanpassen of verslepen." />
                   <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='week'?null:'week')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
                 </div>
@@ -635,16 +635,16 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
               )}
               <label><span>Soort (verplicht)</span>
                 <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
-                  <select value={kind} onChange={e=>setKind(e.target.value)}>
-                    <option value="">Kies soort…</option>
-                    <option value="certificaat">Certificaat</option>
-                    <option value="schriftelijk">Schriftelijk product</option>
-                    <option value="kennistoets">Kennistoets</option>
-                    <option value="vaardigheid">Vaardigheidstest</option>
-                    <option value="performance">Performance</option>
-                    <option value="gesprek">Gesprek</option>
-                    <option value="overig">Overig</option>
-                  </select>
+                <select value={kind} onChange={e=>setKind(e.target.value)}>
+                  <option value="">Kies soort…</option>
+                  <option value="certificaat">Certificaat</option>
+                  <option value="schriftelijk">Schriftelijk product</option>
+                  <option value="kennistoets">Kennistoets</option>
+                  <option value="vaardigheid">Vaardigheidstest</option>
+                  <option value="performance">Performance</option>
+                  <option value="gesprek">Gesprek</option>
+                  <option value="overig">Overig</option>
+                </select>
                   <InfoTip content="Mix van soorten maakt je portfolio sterker; elk type heeft voor- en nadelen." />
                   <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='kind'?null:'kind')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
                 </div>
@@ -749,7 +749,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
                   <div>
                     <div style={{display:'flex', alignItems:'center', gap:8}}>
-                      <div style={{fontWeight:600}}>Relevantie</div>
+                    <div style={{fontWeight:600}}>Relevantie</div>
                       <InfoTip content="Hoe goed sluit dit bewijs aan op de leerdoelen van deze cursus?" />
                       <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='rel'?null:'rel')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
                     </div>
@@ -762,7 +762,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
                   <div>
                     <div style={{display:'flex', alignItems:'center', gap:8}}>
-                      <div style={{fontWeight:600}}>Authenticiteit</div>
+                    <div style={{fontWeight:600}}>Authenticiteit</div>
                       <InfoTip content="Hoe echt/praktijkgetrouw is bewijs en context?" />
                       <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='auth'?null:'auth')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
                     </div>
@@ -774,7 +774,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 )}
                 <div>
                   <div style={{display:'flex', alignItems:'center', gap:8}}>
-                    <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
+                  <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
                     <InfoTip content="Recent bewijs is sterker dan bewijs van (lang) geleden." />
                     <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='actual'?null:'actual')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
                   </div>
@@ -812,7 +812,13 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 const host = document.createElement('div')
                 host.style.position='fixed'; host.style.left='8px'; host.style.right='8px'; host.style.bottom='68px'; host.style.maxHeight='60vh'; host.style.overflow='auto'; host.style.zIndex='3500'; host.style.background='transparent'
                 document.body.appendChild(host)
-                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; window.removeEventListener('mousedown', onClose,true); window.removeEventListener('keydown', onKey,true) }
+                // los zwevende sluitknop (altijd zichtbaar)
+                const overlayBtn = document.createElement('button')
+                overlayBtn.className='wm-smallbtn'
+                overlayBtn.textContent='Preview sluiten'
+                overlayBtn.style.position='fixed'; overlayBtn.style.right='12px'; overlayBtn.style.bottom='80px'; overlayBtn.style.zIndex='3600'
+                document.body.appendChild(overlayBtn)
+                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; if(overlayBtn.parentNode){ document.body.removeChild(overlayBtn) }; window.removeEventListener('mousedown', onClose,true); window.removeEventListener('keydown', onKey,true) }
                 ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
                 setTimeout(()=>{
                   const popup = document.querySelector('.wm-preview') as HTMLElement | null
@@ -824,16 +830,10 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     wrap.style.overflow='hidden'; wrap.style.width='100%'
                     host.innerHTML=''
                     // eigen sluitknop voor inline preview
-                    const closeRow = document.createElement('div')
-                    closeRow.style.display='flex'; closeRow.style.justifyContent='flex-end'; closeRow.style.alignItems='center'
-                    closeRow.style.position='sticky'; closeRow.style.top='0'; closeRow.style.zIndex='1'
-                    closeRow.style.background='var(--surface)'; closeRow.style.padding='6px 0'
-                    const closeBtn = document.createElement('button')
-                    closeBtn.className='wm-smallbtn'
-                    closeBtn.textContent='Preview sluiten'
-                    closeBtn.onclick = cleanup
-                    closeRow.appendChild(closeBtn)
-                    host.appendChild(closeRow)
+                    // (inline sticky bar is optioneel; overlay knop blijft leidend)
+                    const closeBar = document.createElement('div')
+                    closeBar.style.position='sticky'; closeBar.style.top='0'; closeBar.style.height='6px'; closeBar.style.zIndex='1'
+                    host.appendChild(closeBar)
                     wrap.appendChild(clone)
                     host.appendChild(wrap)
                     // maak matrix-knoppen inert binnen de clone
@@ -852,6 +852,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 // sluit bij tweede klik buiten
                 const onClose=(e:MouseEvent)=>{ if(!host.contains(e.target as Node)){ cleanup() } }
                 window.addEventListener('mousedown', onClose, true)
+                overlayBtn.onclick = cleanup
                 const onKey=(e:KeyboardEvent)=>{ if(e.key==='Escape') cleanup() }
                 window.addEventListener('keydown', onKey, true)
               }}>Preview</button>
