@@ -415,13 +415,13 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 {focusKey==='step:rel' && (
                   <GuidanceFloat entryKey="step:rel" anchorEl={document.activeElement as HTMLElement} containerEl={document.querySelector('.dialog') as HTMLElement} fixedTop={112} onRequestClose={()=> setFocusKey(null)} />
                 )}
-                <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
               <div>
                 <div style={{fontWeight:600}}>Relevantie</div>
                     <div className="muted" style={{fontSize:12}}>Klik om een waarde te kiezen. Nog geen keuze = grijze balk.</div>
                   </div>
                   <input aria-label="Relevantie" type="range" min={0} max={5} value={vraak.relevantie} onChange={e=>setVraak({ ...vraak, relevantie: Number(e.target.value) })} onFocus={()=> setFocusKey('step:rel')} />
-                </div>
+              </div>
             </div>
             <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
               <div>
@@ -812,13 +812,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 const host = document.createElement('div')
                 host.style.position='fixed'; host.style.left='8px'; host.style.right='8px'; host.style.bottom='68px'; host.style.maxHeight='60vh'; host.style.overflow='auto'; host.style.zIndex='3500'; host.style.background='transparent'
                 document.body.appendChild(host)
-                // los zwevende sluitknop (altijd zichtbaar)
-                const overlayBtn = document.createElement('button')
-                overlayBtn.className='wm-smallbtn'
-                overlayBtn.textContent='Preview sluiten'
-                overlayBtn.style.position='fixed'; overlayBtn.style.right='12px'; overlayBtn.style.bottom='80px'; overlayBtn.style.zIndex='3600'
-                document.body.appendChild(overlayBtn)
-                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; if(overlayBtn.parentNode){ document.body.removeChild(overlayBtn) }; window.removeEventListener('mousedown', onClose,true); window.removeEventListener('keydown', onKey,true) }
+                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; window.removeEventListener('mousedown', onClose,true); window.removeEventListener('keydown', onKey,true) }
                 ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
                 setTimeout(()=>{
                   const popup = document.querySelector('.wm-preview') as HTMLElement | null
@@ -830,15 +824,24 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     wrap.style.overflow='hidden'; wrap.style.width='100%'
                     host.innerHTML=''
                     // eigen sluitknop voor inline preview
-                    // (inline sticky bar is optioneel; overlay knop blijft leidend)
-                    const closeBar = document.createElement('div')
-                    closeBar.style.position='sticky'; closeBar.style.top='0'; closeBar.style.height='6px'; closeBar.style.zIndex='1'
-                    host.appendChild(closeBar)
+                    // Kopregel voor preview met titel en sluiten-knop (gekoppeld aan deze inline preview)
+                    const header = document.createElement('div')
+                    header.style.position='sticky'; header.style.top='0'; header.style.zIndex='1'
+                    header.style.background='var(--surface)'
+                    header.style.display='flex'; header.style.alignItems='center'; header.style.justifyContent='space-between'; header.style.gap='8px'
+                    header.style.padding='6px 0'
+                    const h = document.createElement('div'); h.style.fontWeight='600'; h.textContent = `Preview — ${name||'voorbeeld'}`
+                    const x = document.createElement('button'); x.className='wm-smallbtn'; x.textContent='Sluiten'; x.onclick = cleanup
+                    header.appendChild(h); header.appendChild(x)
+                    host.appendChild(header)
                     wrap.appendChild(clone)
                     host.appendChild(wrap)
                     // maak matrix-knoppen inert binnen de clone
                     try{
+                      // Verberg/lamsla matrix-eigen knoppen in de clone
                       clone.querySelectorAll('button').forEach((b:any)=>{ b.disabled=true; b.style.pointerEvents='none'; b.style.opacity='0.6' })
+                      const matrixClose = clone.querySelector('button') as HTMLButtonElement | null
+                      if(matrixClose){ matrixClose.style.display='none' }
                     }catch{}
                     const adjust=()=>{
                       const w = wrap.clientWidth
@@ -852,7 +855,6 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 // sluit bij tweede klik buiten
                 const onClose=(e:MouseEvent)=>{ if(!host.contains(e.target as Node)){ cleanup() } }
                 window.addEventListener('mousedown', onClose, true)
-                overlayBtn.onclick = cleanup
                 const onKey=(e:KeyboardEvent)=>{ if(e.key==='Escape') cleanup() }
                 window.addEventListener('keydown', onKey, true)
               }}>Preview</button>
