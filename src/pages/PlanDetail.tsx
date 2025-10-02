@@ -359,6 +359,9 @@ export default function PlanDetail(){
     setShowPdfGuide(false)
     const container = document.querySelector('.center') as HTMLElement | null
     if(!container) return
+    // Forceer tijdelijk 'alle weken passend' (fit) zodat VRAAK/Beheersing correct meekomt
+    const prevFit = (window as any)._pf_getFit?.()
+    if(prevFit === false){ (window as any)._pf_setFit?.(true); await new Promise(r=> setTimeout(r, 100)) }
     const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' })
     const pageW = doc.internal.pageSize.getWidth()
     const pageH = doc.internal.pageSize.getHeight()
@@ -439,6 +442,8 @@ export default function PlanDetail(){
       doc.save(`${localName.replace(/\s+/g,'_')}_matrix.pdf`)
     }finally{
       document.body.removeChild(host)
+      // Herstel eerdere fit-stand
+      if(prevFit === false){ (window as any)._pf_setFit?.(false) }
     }
   }
   async function exportPdfAllArtifacts(){

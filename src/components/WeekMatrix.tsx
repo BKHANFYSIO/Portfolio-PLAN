@@ -364,6 +364,20 @@ export default function WeekMatrix({ plan, onEdit }: Props){
     writeJson(LS_KEYS.ui, next)
   }, [filterKinds, filterPersp, filterMode, compact, fit, ultra])
 
+  // Exporteer globale helpers om de 'fit' (alle weken passend) stand te kunnen uitlezen/instellen vanuit buitenaf (bijv. PDF-export)
+  useEffect(()=>{
+    try{
+      ;(window as any)._pf_getFit = () => fit
+      ;(window as any)._pf_setFit = (v: boolean) => setFit(Boolean(v))
+    }catch{}
+    return ()=>{
+      try{
+        if((window as any)._pf_getFit) delete (window as any)._pf_getFit
+        if((window as any)._pf_setFit) delete (window as any)._pf_setFit
+      }catch{}
+    }
+  }, [fit])
+
   useEffect(()=>{
     const onFs = ()=> setFsRequested(Boolean(document.fullscreenElement))
     document.addEventListener('fullscreenchange', onFs)
@@ -653,7 +667,7 @@ export default function WeekMatrix({ plan, onEdit }: Props){
                   setOpenKennis(next)
                 }
                 return (
-                  <div style={{display:'inline-flex', gap:8}}>
+                  <div style={{display:'inline-flex', gap: ultra ? 4 : 8}}>
                     <button className="wm-smallbtn wm-primary" onClick={toggleAll}>{anyOpen ? 'Alles inklappen' : 'Alles uitklappen'}</button>
                     <button ref={filterBtnRef} className="wm-smallbtn wm-primary" onClick={()=> {
                       const rect = filterBtnRef.current?.getBoundingClientRect()
