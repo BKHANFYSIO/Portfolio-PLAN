@@ -70,6 +70,13 @@ export const GUIDANCE: Record<string, GuidanceEntry> = {
     examples: ['Farmacologie — antibioticabeleid', 'Ethiek — gezamenlijke besluitvorming'],
     criteriaKeys: ['r','k']
   },
+  'step:evl': {
+    key: 'step:evl',
+    shortHelp: 'Kies leeruitkomsten bij passende EVL’s; dekking over alle EVL’s is het doel.',
+    longHelp: 'Selecteer de leeruitkomsten (EVL) waarop dit bewijsstuk betrekking heeft. Dit draagt bij aan Relevantie (aansluiting op leerdoel) en, over de periode, aan Kwantiteit (voldoende bewijs per EVL). Spreiding over EVL’s kan bijdragen aan Variatie.',
+    examples: ['EVL1 · 1.3 Uitvoeren lichamelijk onderzoek', 'EVL3 · 3.2 Geïndiceerde preventie'],
+    criteriaKeys: ['r','k','v']
+  },
   'step:rel': {
     key: 'step:rel',
     shortHelp: 'Hoe goed sluit dit bewijs aan op de leerdoelen van deze cursus?',

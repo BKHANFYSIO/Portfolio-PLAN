@@ -465,28 +465,46 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
             <h4>Controle</h4>
             {/* Preview embed die dezelfde markup gebruikt als de matrix-popup */}
             <div style={{marginTop:12}}>
-              <div className="muted" style={{marginBottom:6}}>Voorbeeld weergave (zoals in de matrix-popup)</div>
+              <div className="muted" style={{marginBottom:6}}>
+                Voorbeeld weergave (zoals in de matrix-popup)
+                <br />
+                <span>Dit is de tegel die je ziet als je in de matrix op het bewijsstuk klikt. Controleer of dit klopt. Zo niet, ga terug naar vorige stappen en wijzig je invoer.</span>
+              </div>
               <div key={`preview-${name}|${week}|${kind}|${evlOutcomeIds.join(',')}|${(noPersp?[]:persp).join(',')}|${vraak.relevantie}|${vraak.authenticiteit}|${caseIds.join(',')}|${knowledgeIds.join(',')}`}
+                style={{overflow:'hidden', width:'100%'}}
                 ref={(el)=>{
                   if(!el) return
                   const artifact:any = {
                     id: 'tmp', name, week: Number(week)||0, evlOutcomeIds, caseIds, knowledgeIds,
                     vraak, kind: kind||undefined, perspectives: noPersp? [] : persp, note: note||undefined
                   }
-                  try{
-                    ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
-                    setTimeout(()=>{
-                      const popup = document.querySelector('.wm-preview') as HTMLElement | null
-                      if(popup){
-                        const clone = popup.cloneNode(true) as HTMLElement
-                        clone.style.position='static'; clone.style.maxHeight='none'; clone.style.height='auto'; clone.style.overflow='visible'
-                        el.innerHTML=''
-                        el.appendChild(clone)
-                      }
-                    }, 40)
-                  }finally{
+                  ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
+                  // Wacht heel even zodat de matrix-preview kan renderen, clone daarna en sluit
+                  setTimeout(()=>{
+                    const popup = document.querySelector('.wm-preview') as HTMLElement | null
+                    if(popup){
+                      const clone = popup.cloneNode(true) as HTMLElement
+                      clone.style.position='static'; clone.style.maxHeight='none'; clone.style.height='auto'; clone.style.overflow='visible'
+                      el.innerHTML=''
+                      el.appendChild(clone)
+                      // Schaal indien breder dan de beschikbare ruimte
+                      try{
+                        const wrapperW = el.clientWidth || el.getBoundingClientRect().width
+                        const rect = clone.getBoundingClientRect()
+                        if(rect.width > wrapperW && wrapperW > 0){
+                          const scale = Math.max(0.6, wrapperW / rect.width)
+                          clone.style.transform = `scale(${scale})`
+                          clone.style.transformOrigin = 'top left'
+                          // Reserveer verticale ruimte zodat geen horizontale scrollbar verschijnt
+                          const scaledH = rect.height * scale
+                          el.style.minHeight = `${Math.ceil(scaledH)+8}px`
+                        }else{
+                          el.style.minHeight = `${Math.ceil(rect.height)+8}px`
+                        }
+                      }catch{}
+                    }
                     ;(window as any)._pf_closePreview?.()
-                  }
+                  }, 80)
                 }} />
             </div>
           </div>
@@ -588,9 +606,9 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
               </>
             ) : (
             <>
-            <div className="grid" style={{gridTemplateColumns:'1fr 180px'}}>
+            <div className="grid" style={{gridTemplateColumns:'1fr 220px'}}>
               <label><span>Naam (verplicht)</span>
-                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
                   <input value={name} onChange={e=>setName(e.target.value)} placeholder="bijv. e-learning certificaat"/>
                   <InfoTip content="Kies een specifieke, herkenbare titel. Vermijd vage namen." />
                   <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='name'?null:'name')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
@@ -600,7 +618,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 <GuidanceInline entryKey="step:name" extraNote={startChoice==='template' ? 'Je koos voor een sjabloon: velden zoals naam of soort kunnen al ingevuld zijn. Je kunt deze altijd aanpassen.' : undefined} />
               )}
               <label><span>Week (verplicht)</span>
-                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
                   <select value={week} onChange={e=>setWeek(Number(e.target.value) as any)}>
                     <option value="">Kies week…</option>
                     {yearWeeks.filter(w=> visibleWeeks.includes(w.week)).map(w => {
@@ -616,7 +634,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 <GuidanceInline entryKey="step:week" />
               )}
               <label><span>Soort (verplicht)</span>
-                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
                   <select value={kind} onChange={e=>setKind(e.target.value)}>
                     <option value="">Kies soort…</option>
                     <option value="certificaat">Certificaat</option>
@@ -643,7 +661,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     setEvlOutcomeIds([...(t.evl||[])])
                     setCaseIds([...(t.cases||[])])
                     setKnowledgeIds([...(t.knowledge||[])])
-                    setVraak({ ...(t.vraak||{ variatie:3, relevantie:3, authenticiteit:3, actualiteit:3, kwantiteit:3 }) })
+                    setVraak({ ...(t.vraak||{ variatie:0, relevantie:0, authenticiteit:0, actualiteit:0, kwantiteit:0 }) })
                     if(t.kind){ setKind(t.kind) }
                   }}>
                     <option value="">Kies sjabloon…</option>
@@ -658,7 +676,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                   <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='persp'?null:'persp')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
                 </div>
                 <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
-                  {(['zelfreflectie','peer','ouderejaars','docent','extern'] as PerspectiveKey[]).map(p => (
+                  {(['zelfreflectie','docent','student-p','student-hf1','student-hf2-3','stagebegeleider','patient','overig'] as PerspectiveKey[]).map(p => (
                     <label key={p} style={{display:'inline-flex',gap:6,alignItems:'center'}}>
                       <input type="checkbox" checked={persp.includes(p)} onChange={()=> setPersp(s=> s.includes(p) ? s.filter(x=>x!==p) : [...s,p]) } /> {p}
                     </label>
@@ -675,6 +693,13 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
             </div>
             <fieldset>
               <legend>EVL leeruitkomsten</legend>
+              <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
+                <InfoTip content="Kies leeruitkomsten bij passende EVL’s; dekking over alle EVL’s is het doel." />
+                <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='evl'?null:'evl')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
+              </div>
+              {fullHelpKey==='evl' && (
+                <GuidanceInline entryKey="step:evl" />
+              )}
               {evlForCourse.map(b=> (
                 <div key={b.id} style={{marginBottom:8}}>
                   <div className="muted" style={{fontSize:12}}>{b.id} · {b.name}</div>
@@ -723,21 +748,39 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 </div>
                 <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
                   <div>
-                    <div style={{fontWeight:600}}>Relevantie</div>
-                    <div className="muted" style={{fontSize:12}}>In hoeverre draagt dit bewijsstuk bij aan de LUK/EVL?</div>
+                    <div style={{display:'flex', alignItems:'center', gap:8}}>
+                      <div style={{fontWeight:600}}>Relevantie</div>
+                      <InfoTip content="Hoe goed sluit dit bewijs aan op de leerdoelen van deze cursus?" />
+                      <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='rel'?null:'rel')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
+                    </div>
                   </div>
-                  <input type="range" min={1} max={5} value={vraak.relevantie} onChange={e=>setVraak({ ...vraak, relevantie: Number(e.target.value) })} />
+                  <input type="range" min={0} max={5} value={vraak.relevantie} onChange={e=>setVraak({ ...vraak, relevantie: Number(e.target.value) })} />
                 </div>
+                {fullHelpKey==='rel' && (
+                  <GuidanceInline entryKey="step:rel" />
+                )}
                 <div style={{display:'grid', gridTemplateColumns:'1fr 220px', alignItems:'center', gap:12}}>
                   <div>
-                    <div style={{fontWeight:600}}>Authenticiteit</div>
-                    <div className="muted" style={{fontSize:12}}>Hoe echt/praktijk‑getrouw is het bewijs en de context?</div>
+                    <div style={{display:'flex', alignItems:'center', gap:8}}>
+                      <div style={{fontWeight:600}}>Authenticiteit</div>
+                      <InfoTip content="Hoe echt/praktijkgetrouw is bewijs en context?" />
+                      <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='auth'?null:'auth')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
+                    </div>
                   </div>
-                  <input type="range" min={1} max={5} value={vraak.authenticiteit} onChange={e=>setVraak({ ...vraak, authenticiteit: Number(e.target.value) })} />
+                  <input type="range" min={0} max={5} value={vraak.authenticiteit} onChange={e=>setVraak({ ...vraak, authenticiteit: Number(e.target.value) })} />
                 </div>
+                {fullHelpKey==='auth' && (
+                  <GuidanceInline entryKey="step:auth" />
+                )}
                 <div>
-                  <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
-                  <div className="muted" style={{fontSize:12, marginBottom:6}}>Standaard gaan we uit van de lesweek van dit bewijs. Is de prestatie ouder? Kies hieronder de periode.</div>
+                  <div style={{display:'flex', alignItems:'center', gap:8}}>
+                    <div style={{fontWeight:600, marginBottom:4}}>Actualiteit</div>
+                    <InfoTip content="Recent bewijs is sterker dan bewijs van (lang) geleden." />
+                    <button type="button" onClick={()=> setFullHelpKey(fullHelpKey==='actual'?null:'actual')} className="file-label" style={{padding:'4px 8px', fontSize:12}}>Toon uitleg</button>
+                  </div>
+                  {fullHelpKey==='actual' && (
+                    <GuidanceInline entryKey="step:actual" />
+                  )}
                   <label style={{display:'block'}}>
                     <span className="muted" style={{display:'block', fontSize:12, marginBottom:4}}>Periode van prestatie (indien ouder)</span>
                     <select value={occAge} onChange={e=> setOccAge(e.target.value as EvidenceAgeBracket|'' )}>

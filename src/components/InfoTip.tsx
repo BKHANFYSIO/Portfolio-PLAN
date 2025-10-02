@@ -32,15 +32,27 @@ export default function InfoTip({ title, content }: Props){
         }}
         onBlur={()=> setOpen(false)}
       >i</button>
-      {open && (
-        <div
-          ref={tipRef}
-          role="tooltip"
-          onMouseLeave={()=> setOpen(false)}
-          style={{position:'absolute', zIndex:2000, left:0, top:'calc(100% + 6px)', minWidth:240, maxWidth:360, background:'var(--surface)', border:'1px solid var(--line-strong)', borderRadius:8, padding:8, boxShadow:'0 8px 18px rgba(0,0,0,.35)'}}>
-          {content}
-        </div>
-      )}
+      {open && (()=>{
+        const r = btnRef.current?.getBoundingClientRect()
+        const left = r?.left || 0
+        const top = (r?.bottom || 0) + 6
+        const maxW = Math.min(360, window.innerWidth - left - 16)
+        return (
+          <div
+            ref={tipRef}
+            role="tooltip"
+            onMouseLeave={()=> setOpen(false)}
+            style={{
+              position:'fixed', zIndex:4000, left, top,
+              minWidth:240, maxWidth: maxW,
+              background:'var(--surface)', border:'1px solid var(--line-strong)', borderRadius:8, padding:8,
+              boxShadow:'0 8px 18px rgba(0,0,0,.35)',
+              whiteSpace:'normal', overflowWrap:'anywhere', wordBreak:'normal', lineHeight:1.4
+            }}>
+            {content}
+          </div>
+        )
+      })()}
     </span>
   )
 }
