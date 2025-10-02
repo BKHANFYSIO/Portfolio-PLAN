@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GUIDANCE, VRAAK_META } from '../lib/guidance'
 
 type Props = { entryKey: string; anchorEl: HTMLElement | null; extraNote?: string; onRequestClose?: ()=>void; containerEl?: HTMLElement | null; forcePlacement?: 'bottom'|'right'|'left'|'top'; fixedTop?: number }

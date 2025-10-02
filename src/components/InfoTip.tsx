@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-type Props = { title?: string; content: string | JSX.Element }
+type Props = { title?: string; content: string | React.ReactNode }
 
 export default function InfoTip({ title, content }: Props){
   const [open, setOpen] = useState(false)

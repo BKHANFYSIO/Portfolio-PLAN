@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import GuidancePanel from '../components/GuidancePanel'
+// import GuidancePanel from '../components/GuidancePanel'
 import GuidanceInline from '../components/GuidanceInline'
 import GuidanceFloat from '../components/GuidanceFloat'
 import InfoTip from '../components/InfoTip'
