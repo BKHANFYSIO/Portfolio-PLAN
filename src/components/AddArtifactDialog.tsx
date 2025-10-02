@@ -833,6 +833,13 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     const h = document.createElement('div'); h.style.fontWeight='600'; h.textContent = `Preview — ${name||'voorbeeld'}`
                     const x = document.createElement('button'); x.className='wm-smallbtn'; x.textContent='Sluiten'; x.onclick = cleanup
                     header.appendChild(h); header.appendChild(x)
+                    // meet clone breedte om header even breed te maken
+                    const temp = clone.cloneNode(true) as HTMLElement
+                    temp.style.visibility='hidden'; temp.style.position='absolute'; temp.style.left='-10000px'; document.body.appendChild(temp)
+                    const desiredWidth = Math.min(temp.getBoundingClientRect().width, host.getBoundingClientRect().width)
+                    document.body.removeChild(temp)
+                    header.style.width = desiredWidth ? desiredWidth + 'px' : '100%'
+                    wrap.style.maxWidth = header.style.width
                     host.appendChild(header)
                     wrap.appendChild(clone)
                     host.appendChild(wrap)
@@ -846,7 +853,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     const adjust=()=>{
                       const w = wrap.clientWidth
                       const rect = clone.getBoundingClientRect()
-                      if(rect.width>w && w>0){ const s=Math.max(0.6,w/rect.width); clone.style.transform=`scale(${s})`; clone.style.transformOrigin='top left'; host.style.minHeight=`${Math.ceil(rect.height*s)+8}px` } else { clone.style.transform=''; host.style.minHeight=`${Math.ceil(rect.height)+8}px` }
+                      if(rect.width>w && w>0){ const s=Math.max(0.6,w/rect.width); clone.style.transform=`scale(${s})`; clone.style.transformOrigin='top left'; host.style.minHeight=`${Math.ceil(rect.height*s)+8}px`; header.style.width = w + 'px'; wrap.style.maxWidth = w + 'px' } else { clone.style.transform=''; host.style.minHeight=`${Math.ceil(rect.height)+8}px`; header.style.width = rect.width + 'px'; wrap.style.maxWidth = rect.width + 'px' }
                     }
                     adjust(); setTimeout(adjust,10)
                   }
