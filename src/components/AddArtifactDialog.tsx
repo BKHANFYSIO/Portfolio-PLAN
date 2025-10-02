@@ -812,6 +812,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 const host = document.createElement('div')
                 host.style.position='fixed'; host.style.left='8px'; host.style.right='8px'; host.style.bottom='68px'; host.style.maxHeight='60vh'; host.style.overflow='auto'; host.style.zIndex='3500'
                 document.body.appendChild(host)
+                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; window.removeEventListener('mousedown', onClose,true) }
                 ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
                 setTimeout(()=>{
                   const popup = document.querySelector('.wm-preview') as HTMLElement | null
@@ -822,8 +823,21 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     const wrap = document.createElement('div')
                     wrap.style.overflow='hidden'; wrap.style.width='100%'
                     host.innerHTML=''
+                    // eigen sluitknop voor inline preview
+                    const closeRow = document.createElement('div')
+                    closeRow.style.display='flex'; closeRow.style.justifyContent='flex-end'; closeRow.style.margin='4px 0'
+                    const closeBtn = document.createElement('button')
+                    closeBtn.className='wm-smallbtn'
+                    closeBtn.textContent='Preview sluiten'
+                    closeBtn.onclick = cleanup
+                    closeRow.appendChild(closeBtn)
+                    host.appendChild(closeRow)
                     wrap.appendChild(clone)
                     host.appendChild(wrap)
+                    // maak matrix-knoppen inert binnen de clone
+                    try{
+                      clone.querySelectorAll('button').forEach((b:any)=>{ b.disabled=true; b.style.pointerEvents='none'; b.style.opacity='0.6' })
+                    }catch{}
                     const adjust=()=>{
                       const w = wrap.clientWidth
                       const rect = clone.getBoundingClientRect()
@@ -834,7 +848,7 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                   ;(window as any)._pf_closePreview?.()
                 }, 60)
                 // sluit bij tweede klik buiten
-                const onClose=(e:MouseEvent)=>{ if(!host.contains(e.target as Node)){ document.body.removeChild(host); window.removeEventListener('mousedown', onClose,true) } }
+                const onClose=(e:MouseEvent)=>{ if(!host.contains(e.target as Node)){ cleanup() } }
                 window.addEventListener('mousedown', onClose, true)
               }}>Preview</button>
               <button className="btn" onClick={save}>Opslaan</button>
