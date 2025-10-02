@@ -801,9 +801,42 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 </div>
               </div>
             </fieldset>
-            <div className="dialog-actions">
+            <div className="dialog-actions" style={{flexWrap:'wrap'}}>
               <button className="file-label" onClick={confirmClose}>Annuleren</button>
               <button onClick={()=> setStep(0)}>Vorige</button>
+              <button type="button" onClick={()=>{
+                const artifact:any = {
+                  id: 'tmp', name, week: Number(week)||0, evlOutcomeIds, caseIds, knowledgeIds,
+                  vraak, kind: kind||undefined, perspectives: noPersp? [] : persp, note: note||undefined
+                }
+                const host = document.createElement('div')
+                host.style.position='fixed'; host.style.left='8px'; host.style.right='8px'; host.style.bottom='68px'; host.style.maxHeight='60vh'; host.style.overflow='auto'; host.style.zIndex='3500'
+                document.body.appendChild(host)
+                ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
+                setTimeout(()=>{
+                  const popup = document.querySelector('.wm-preview') as HTMLElement | null
+                  if(popup){
+                    const clone = popup.cloneNode(true) as HTMLElement
+                    clone.style.position='static'; clone.style.maxHeight='none'; clone.style.height='auto'; clone.style.overflow='visible'
+                    // schaal indien nodig
+                    const wrap = document.createElement('div')
+                    wrap.style.overflow='hidden'; wrap.style.width='100%'
+                    host.innerHTML=''
+                    wrap.appendChild(clone)
+                    host.appendChild(wrap)
+                    const adjust=()=>{
+                      const w = wrap.clientWidth
+                      const rect = clone.getBoundingClientRect()
+                      if(rect.width>w && w>0){ const s=Math.max(0.6,w/rect.width); clone.style.transform=`scale(${s})`; clone.style.transformOrigin='top left'; host.style.minHeight=`${Math.ceil(rect.height*s)+8}px` } else { clone.style.transform=''; host.style.minHeight=`${Math.ceil(rect.height)+8}px` }
+                    }
+                    adjust(); setTimeout(adjust,10)
+                  }
+                  ;(window as any)._pf_closePreview?.()
+                }, 60)
+                // sluit bij tweede klik buiten
+                const onClose=(e:MouseEvent)=>{ if(!host.contains(e.target as Node)){ document.body.removeChild(host); window.removeEventListener('mousedown', onClose,true) } }
+                window.addEventListener('mousedown', onClose, true)
+              }}>Preview</button>
               <button className="btn" onClick={save}>Opslaan</button>
             </div>
             </>
