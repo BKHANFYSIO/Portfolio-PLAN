@@ -810,9 +810,9 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                   vraak, kind: kind||undefined, perspectives: noPersp? [] : persp, note: note||undefined
                 }
                 const host = document.createElement('div')
-                host.style.position='fixed'; host.style.left='8px'; host.style.right='8px'; host.style.bottom='68px'; host.style.maxHeight='60vh'; host.style.overflow='auto'; host.style.zIndex='3500'
+                host.style.position='fixed'; host.style.left='8px'; host.style.right='8px'; host.style.bottom='68px'; host.style.maxHeight='60vh'; host.style.overflow='auto'; host.style.zIndex='3500'; host.style.background='transparent'
                 document.body.appendChild(host)
-                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; window.removeEventListener('mousedown', onClose,true) }
+                const cleanup = ()=>{ if(host.parentNode){ document.body.removeChild(host) }; window.removeEventListener('mousedown', onClose,true); window.removeEventListener('keydown', onKey,true) }
                 ;(window as any)._pf_setPreview?.([artifact], name||'Voorbeeld')
                 setTimeout(()=>{
                   const popup = document.querySelector('.wm-preview') as HTMLElement | null
@@ -825,7 +825,9 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                     host.innerHTML=''
                     // eigen sluitknop voor inline preview
                     const closeRow = document.createElement('div')
-                    closeRow.style.display='flex'; closeRow.style.justifyContent='flex-end'; closeRow.style.margin='4px 0'
+                    closeRow.style.display='flex'; closeRow.style.justifyContent='flex-end'; closeRow.style.alignItems='center'
+                    closeRow.style.position='sticky'; closeRow.style.top='0'; closeRow.style.zIndex='1'
+                    closeRow.style.background='var(--surface)'; closeRow.style.padding='6px 0'
                     const closeBtn = document.createElement('button')
                     closeBtn.className='wm-smallbtn'
                     closeBtn.textContent='Preview sluiten'
@@ -850,6 +852,8 @@ export default function AddArtifactDialog({ plan, onClose, onSaved, initialWeek,
                 // sluit bij tweede klik buiten
                 const onClose=(e:MouseEvent)=>{ if(!host.contains(e.target as Node)){ cleanup() } }
                 window.addEventListener('mousedown', onClose, true)
+                const onKey=(e:KeyboardEvent)=>{ if(e.key==='Escape') cleanup() }
+                window.addEventListener('keydown', onKey, true)
               }}>Preview</button>
               <button className="btn" onClick={save}>Opslaan</button>
             </div>
